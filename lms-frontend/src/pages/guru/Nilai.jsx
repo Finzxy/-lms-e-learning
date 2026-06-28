@@ -1,0 +1,343 @@
+import { useState, useEffect } from 'react';
+import { Save, Search, Filter } from 'lucide-react';
+import Button from '../../components/common/Button';
+import Input from '../../components/common/Input';
+import Card from '../../components/common/Card';
+import nilaiService from '../../services/nilaiService';
+
+const Nilai = () => {
+  const [loading, setLoading] = useState(false);
+  const [siswaList, setSiswaList] = useState([]);
+  const [nilaiData, setNilaiData] = useState({});
+  
+  // Filters
+  const [selectedKelas, setSelectedKelas] = useState('');
+  const [selectedMapel, setSelectedMapel] = useState('');
+  const [selectedJenis, setSelectedJenis] = useState('');
+  const [keterangan, setKeterangan] = useState('');
+
+  // Allowed data from jadwal (authorization)
+  const [allowedMapel, setAllowedMapel] = useState([]);
+  const [allowedKelas, setAllowedKelas] = useState([]);
+
+  // Load allowed mapel & kelas (from jadwal mengajar)
+  useEffect(() => {
+    loadAllowedData();
+  }, []);
+
+  // Load data when filters change
+  useEffect(() => {
+    if (selectedKelas && selectedMapel && selectedJenis) {
+      loadNilai();
+    }
+  }, [selectedKelas, selectedMapel, selectedJenis]);
+
+  const loadAllowedData = async () => {
+    try {
+      // TODO: Replace with actual API endpoint
+      // const response = await api.get('/guru/mapel-kelas');
+      
+      // Mock data - will be replaced with API call
+      const mockData = {
+        mata_pelajaran: [
+          { id: 1, nama: 'Pemrograman Web', kode: 'PWEB' },
+          { id: 2, nama: 'Database', kode: 'DB' },
+        ],
+        kelas: [
+          { id: 1, nama: 'XII RPL 1' },
+          { id: 2, nama: 'XII RPL 2' },
+          { id: 3, nama: 'XI RPL 1' },
+        ],
+      };
+      
+      setAllowedMapel(mockData.mata_pelajaran);
+      setAllowedKelas(mockData.kelas);
+    } catch (error) {
+      console.error('Error loading allowed data:', error);
+      alert('Gagal memuat data mata pelajaran dan kelas');
+    }
+  };
+
+  const loadNilai = async () => {
+    try {
+      setLoading(true);
+      const response = await nilaiService.getNilaiByKelas(
+        selectedKelas,
+        selectedMapel,
+        selectedJenis
+      );
+      
+      setSiswaList(response.data);
+      
+      // Initialize nilai data
+      const initialData = {};
+      response.data.forEach(siswa => {
+        initialData[siswa.siswa_id] = {
+          nilai: siswa.nilai || '',
+          keterangan: siswa.keterangan || '',
+        };
+      });
+      setNilaiData(initialData);
+    } catch (error) {
+      console.error('Error loading nilai:', error);
+      alert('Gagal memuat data nilai');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle nilai change
+  const handleNilaiChange = (siswaId, field, value) => {
+    setNilaiData(prev => ({
+      ...prev,
+      [siswaId]: {
+        ...prev[siswaId],
+        [field]: value,
+      }
+    }));
+  };
+
+  // Handle save
+  const handleSave = async () => {
+    if (!selectedKelas || !selectedMapel || !selectedJenis) {
+      alert('Pilih kelas, mata pelajaran, dan jenis nilai terlebih dahulu');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Prepare data
+      const nilaiList = siswaList.map(siswa => ({
+        siswa_id: siswa.siswa_id,
+        siswa_nama: siswa.siswa_nama,
+        siswa_nis: siswa.siswa_nis,
+        nilai: nilaiData[siswa.siswa_id]?.nilai || null,
+        keterangan: nilaiData[siswa.siswa_id]?.keterangan || keterangan,
+      }));
+
+      const data = {
+        kelas_id: selectedKelas,
+        mata_pelajaran_id: selectedMapel,
+        jenis: selectedJenis,
+        keterangan: keterangan,
+        nilai_list: nilaiList,
+      };
+
+      await nilaiService.bulkInputNilai(data);
+      alert('Nilai berhasil disimpan');
+      
+      // Reload data
+      loadNilai();
+    } catch (error) {
+      console.error('Error saving nilai:', error);
+      alert(error.message || 'Gagal menyimpan nilai');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get nilai color
+  const getNilaiColor = (nilai) => {
+    if (!nilai) return '';
+    const n = parseInt(nilai);
+    if (n >= 85) return 'text-green-600 font-semibold';
+    if (n >= 70) return 'text-blue-600 font-semibold';
+    if (n >= 60) return 'text-yellow-600 font-semibold';
+    return 'text-red-600 font-semibold';
+  };
+
+  return (
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Input Nilai</h1>
+        <p className="text-gray-600">Input nilai siswa per kelas dan mata pelajaran</p>
+      </div>
+
+      {/* Filter Card */}
+      <Card className="mb-6">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter Data</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Kelas */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Kelas <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedKelas}
+                onChange={(e) => setSelectedKelas(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Pilih Kelas</option>
+                {allowedKelas.map((kelas) => (
+                  <option key={kelas.id} value={kelas.id}>
+                    {kelas.nama}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Mata Pelajaran */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mata Pelajaran <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedMapel}
+                onChange={(e) => setSelectedMapel(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Pilih Mata Pelajaran</option>
+                {allowedMapel.map((mapel) => (
+                  <option key={mapel.id} value={mapel.id}>
+                    {mapel.nama} ({mapel.kode})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Jenis Nilai */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Jenis Nilai <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedJenis}
+                onChange={(e) => setSelectedJenis(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Pilih Jenis</option>
+                <option value="tugas">Tugas</option>
+                <option value="uts">UTS</option>
+                <option value="uas">UAS</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Keterangan Global */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Keterangan (Opsional, akan digunakan jika keterangan per siswa kosong)
+            </label>
+            <Input
+              value={keterangan}
+              onChange={(e) => setKeterangan(e.target.value)}
+              placeholder="Contoh: UTS Semester 2"
+            />
+          </div>
+        </div>
+      </Card>
+
+      {/* Nilai Table */}
+      {siswaList.length > 0 ? (
+        <Card>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Daftar Siswa ({siswaList.length})
+            </h3>
+            <Button
+              onClick={handleSave}
+              disabled={loading}
+              icon={Save}
+            >
+              {loading ? 'Menyimpan...' : 'Simpan Semua'}
+            </Button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-16">No</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">NIS</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Nama Siswa</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-32">Nilai (0-100)</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {siswaList.map((siswa, index) => (
+                  <tr key={siswa.siswa_id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{siswa.siswa_nis}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      {siswa.siswa_nama}
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={nilaiData[siswa.siswa_id]?.nilai || ''}
+                        onChange={(e) => handleNilaiChange(siswa.siswa_id, 'nilai', e.target.value)}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${getNilaiColor(nilaiData[siswa.siswa_id]?.nilai)}`}
+                        placeholder="0-100"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="text"
+                        value={nilaiData[siswa.siswa_id]?.keterangan || ''}
+                        onChange={(e) => handleNilaiChange(siswa.siswa_id, 'keterangan', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        placeholder="Keterangan khusus..."
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <Button
+              onClick={handleSave}
+              disabled={loading}
+              icon={Save}
+              size="lg"
+              variant="secondary"
+            >
+              {loading ? 'Menyimpan...' : 'Simpan Semua Nilai'}
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <Card>
+          <div className="text-center py-12">
+            <Filter className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">Pilih Filter</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Pilih kelas, mata pelajaran, dan jenis nilai untuk mulai input nilai.
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* Instructions */}
+      <Card className="mt-6 bg-blue-50 border-blue-200">
+        <div className="flex gap-3">
+          <div className="flex-shrink-0">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span className="text-blue-600 text-lg">💡</span>
+            </div>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-semibold text-blue-900 mb-2">Petunjuk Input Nilai</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Pilih kelas, mata pelajaran, dan jenis nilai terlebih dahulu</li>
+              <li>• Nilai harus antara 0-100</li>
+              <li>• Keterangan per siswa bersifat opsional</li>
+              <li>• Warna nilai: <span className="text-green-600 font-semibold">&gt;=85 (Sangat Baik)</span>, <span className="text-blue-600 font-semibold">70-84 (Baik)</span>, <span className="text-yellow-600 font-semibold">60-69 (Cukup)</span>, <span className="text-red-600 font-semibold">&lt;60 (Kurang)</span></li>
+              <li>• Klik "Simpan Semua" untuk menyimpan seluruh nilai sekaligus</li>
+            </ul>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+export default Nilai;
