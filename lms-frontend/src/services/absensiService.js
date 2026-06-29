@@ -1,58 +1,14 @@
 import api from './api';
-
-// Mock data untuk development
-const mockAbsensi = [
-  {
-    id: 1,
-    siswa: { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
-    mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    tanggal: '2024-02-15',
-    status: 'hadir', // hadir, sakit, izin, alpha
-    keterangan: null,
-    created_at: '2024-02-15T08:00:00Z',
-  },
-  {
-    id: 2,
-    siswa: { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
-    mata_pelajaran: { id: 2, nama: 'Basis Data' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    tanggal: '2024-02-16',
-    status: 'sakit',
-    keterangan: 'Demam',
-    created_at: '2024-02-16T08:00:00Z',
-  },
-  {
-    id: 3,
-    siswa: { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
-    mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    tanggal: '2024-02-17',
-    status: 'hadir',
-    keterangan: null,
-    created_at: '2024-02-17T08:00:00Z',
-  },
-  {
-    id: 4,
-    siswa: { id: 5, nama: 'Dewi Lestari', nis: '12346' },
-    mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    tanggal: '2024-02-15',
-    status: 'hadir',
-    keterangan: null,
-    created_at: '2024-02-15T08:00:00Z',
-  },
-  {
-    id: 5,
-    siswa: { id: 5, nama: 'Dewi Lestari', nis: '12346' },
-    mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    tanggal: '2024-02-17',
-    status: 'izin',
-    keterangan: 'Acara keluarga',
-    created_at: '2024-02-17T08:00:00Z',
-  },
-];
+import {
+  absensi as mockAbsensi,
+  getCurrentUser,
+  validateTeacherAssignment,
+  enrichMataPelajaran,
+  enrichKelas,
+  enrichSiswa,
+  getSiswaByKelas,
+  mockDelay,
+} from '../mocks/academicMock';
 
 /**
  * Get all absensi with filters
@@ -66,15 +22,28 @@ export const getAllAbsensi = async (params = {}) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await mockDelay(500);
     
+    const currentUser = getCurrentUser();
     let filtered = [...mockAbsensi];
     
+    // Filter by role
+    if (currentUser) {
+      if (currentUser.role === 'guru') {
+        // Guru hanya melihat absensi yang dia input
+        filtered = filtered.filter(a => a.guru_id === currentUser.id);
+      } else if (currentUser.role === 'siswa') {
+        // Siswa hanya melihat absensinya sendiri
+        filtered = filtered.filter(a => a.siswa_id === currentUser.id);
+      }
+      // Admin melihat semua
+    }
+    
     if (params.mata_pelajaran_id) {
-      filtered = filtered.filter(a => a.mata_pelajaran.id === parseInt(params.mata_pelajaran_id));
+      filtered = filtered.filter(a => a.mata_pelajaran_id === parseInt(params.mata_pelajaran_id));
     }
     if (params.kelas_id) {
-      filtered = filtered.filter(a => a.kelas.id === parseInt(params.kelas_id));
+      filtered = filtered.filter(a => a.kelas_id === parseInt(params.kelas_id));
     }
     if (params.tanggal) {
       filtered = filtered.filter(a => a.tanggal === params.tanggal);
@@ -83,10 +52,18 @@ export const getAllAbsensi = async (params = {}) => {
       filtered = filtered.filter(a => a.tanggal.startsWith(params.bulan));
     }
     if (params.siswa_id) {
-      filtered = filtered.filter(a => a.siswa.id === parseInt(params.siswa_id));
+      filtered = filtered.filter(a => a.siswa_id === parseInt(params.siswa_id));
     }
     
-    return { data: filtered };
+    // Enrich data
+    const enriched = filtered.map(a => ({
+      ...a,
+      siswa: enrichSiswa(a.siswa_id),
+      mata_pelajaran: enrichMataPelajaran(a.mata_pelajaran_id),
+      kelas: enrichKelas(a.kelas_id),
+    }));
+    
+    return { data: enriched };
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -108,34 +85,34 @@ export const getAbsensiByKelas = async (kelasId, mataPelajaranId, tanggal) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await mockDelay(400);
     
-    // Mock siswa list
-    const siswaList = [
-      { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
-      { id: 5, nama: 'Dewi Lestari', nis: '12346' },
-      { id: 6, nama: 'Budi Setiawan', nis: '12347' },
-      { id: 7, nama: 'Siti Aminah', nis: '12348' },
-      { id: 8, nama: 'Eko Prasetyo', nis: '12349' },
-    ];
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.role === 'guru') {
+      // Validate guru mengajar di kelas/mapel ini
+      validateTeacherAssignment(currentUser.id, mataPelajaranId, kelasId);
+    }
+    
+    // Get siswa list untuk kelas
+    const siswaList = getSiswaByKelas(kelasId);
 
     // Get existing absensi
     const existingAbsensi = mockAbsensi.filter(a => 
-      a.kelas.id === parseInt(kelasId) && 
-      a.mata_pelajaran.id === parseInt(mataPelajaranId) &&
+      a.kelas_id === parseInt(kelasId) && 
+      a.mata_pelajaran_id === parseInt(mataPelajaranId) &&
       a.tanggal === tanggal
     );
 
     // Combine siswa list with their absensi
     const result = siswaList.map(siswa => {
-      const absensi = existingAbsensi.find(a => a.siswa.id === siswa.id);
+      const absensiData = existingAbsensi.find(a => a.siswa_id === siswa.id);
       return {
         siswa_id: siswa.id,
-        siswa_nama: siswa.nama,
+        siswa_nama: siswa.name,
         siswa_nis: siswa.nis,
-        status: absensi?.status || 'hadir',
-        keterangan: absensi?.keterangan || '',
-        absensi_id: absensi?.id || null,
+        status: absensiData?.status || 'hadir',
+        keterangan: absensiData?.keterangan || '',
+        absensi_id: absensiData?.id || null,
       };
     });
     
@@ -157,15 +134,24 @@ export const bulkInputAbsensi = async (data) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await mockDelay(800);
+    
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'guru') {
+      throw { status: 403, message: 'Hanya guru yang dapat input absensi' };
+    }
+    
+    // Validate teaching assignment
+    validateTeacherAssignment(currentUser.id, data.mata_pelajaran_id, data.kelas_id);
     
     // Simulate saving data
     data.absensi_list.forEach((item, index) => {
       const newAbsensi = {
         id: mockAbsensi.length + index + 1,
-        siswa: { id: item.siswa_id, nama: item.siswa_nama, nis: item.siswa_nis },
-        mata_pelajaran: { id: data.mata_pelajaran_id, nama: 'Pemrograman Web' },
-        kelas: { id: data.kelas_id, nama: 'XII RPL 1' },
+        siswa_id: item.siswa_id,
+        guru_id: currentUser.id,
+        mata_pelajaran_id: data.mata_pelajaran_id,
+        kelas_id: data.kelas_id,
         tanggal: data.tanggal,
         status: item.status,
         keterangan: item.keterangan || '',
@@ -174,8 +160,8 @@ export const bulkInputAbsensi = async (data) => {
       
       // Check if absensi already exists (update) or new (create)
       const existingIndex = mockAbsensi.findIndex(a => 
-        a.siswa.id === item.siswa_id &&
-        a.mata_pelajaran.id === data.mata_pelajaran_id &&
+        a.siswa_id === item.siswa_id &&
+        a.mata_pelajaran_id === data.mata_pelajaran_id &&
         a.tanggal === data.tanggal
       );
 
@@ -204,13 +190,18 @@ export const getMyAbsensi = async (params = {}) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await mockDelay(400);
     
-    // Filter absensi for current user (mock: siswa id 4)
-    let filtered = mockAbsensi.filter(a => a.siswa.id === 4);
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'siswa') {
+      throw { status: 403, message: 'Hanya siswa yang dapat melihat absensi mereka' };
+    }
+    
+    // Filter absensi for current user
+    let filtered = mockAbsensi.filter(a => a.siswa_id === currentUser.id);
     
     if (params.mata_pelajaran_id) {
-      filtered = filtered.filter(a => a.mata_pelajaran.id === parseInt(params.mata_pelajaran_id));
+      filtered = filtered.filter(a => a.mata_pelajaran_id === parseInt(params.mata_pelajaran_id));
     }
     if (params.bulan) {
       filtered = filtered.filter(a => a.tanggal.startsWith(params.bulan));
@@ -219,7 +210,14 @@ export const getMyAbsensi = async (params = {}) => {
     // Sort by date descending
     filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
     
-    return { data: filtered };
+    // Enrich data
+    const enriched = filtered.map(a => ({
+      ...a,
+      mata_pelajaran: enrichMataPelajaran(a.mata_pelajaran_id),
+      kelas: enrichKelas(a.kelas_id),
+    }));
+    
+    return { data: enriched };
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -238,9 +236,14 @@ export const getAbsensiSummary = async (params = {}) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await mockDelay(300);
     
-    let myAbsensi = mockAbsensi.filter(a => a.siswa.id === 4);
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'siswa') {
+      throw { status: 403, message: 'Hanya siswa yang dapat melihat summary absensi mereka' };
+    }
+    
+    let myAbsensi = mockAbsensi.filter(a => a.siswa_id === currentUser.id);
     
     if (params.bulan) {
       myAbsensi = myAbsensi.filter(a => a.tanggal.startsWith(params.bulan));
@@ -283,10 +286,15 @@ export const getAbsensiChart = async (tahun = '2024') => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await mockDelay(400);
+    
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'siswa') {
+      throw { status: 403, message: 'Hanya siswa yang dapat melihat chart absensi mereka' };
+    }
     
     const myAbsensi = mockAbsensi.filter(a => 
-      a.siswa.id === 4 && a.tanggal.startsWith(tahun)
+      a.siswa_id === currentUser.id && a.tanggal.startsWith(tahun)
     );
     
     // Group by month

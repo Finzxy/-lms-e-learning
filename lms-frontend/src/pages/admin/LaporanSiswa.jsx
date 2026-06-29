@@ -3,6 +3,7 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import StatCard from '../../components/common/StatCard';
+import PageHeader from '../../components/common/PageHeader';
 import { 
   Download, 
   FileText, 
@@ -14,6 +15,7 @@ import {
   Calendar,
   CheckCircle
 } from 'lucide-react';
+import { getLaporanSiswa } from '../../mocks/academicMock';
 
 const LaporanSiswa = () => {
   const [filters, setFilters] = useState({
@@ -23,67 +25,25 @@ const LaporanSiswa = () => {
     search: ''
   });
 
-  // Mock data
-  const laporanData = [
-    {
-      id: 1,
-      nis: '202401001',
-      nama: 'Ahmad Fauzi',
-      kelas: 'XII RPL 1',
-      jurusan: 'RPL',
-      avgNilai: 87.5,
-      kehadiran: 92,
-      tugasSelesai: 45,
-      totalTugas: 48,
-      ranking: 3,
-      trend: 'up'
-    },
-    {
-      id: 2,
-      nis: '202401002',
-      nama: 'Siti Nurhaliza',
-      kelas: 'XII RPL 1',
-      jurusan: 'RPL',
-      avgNilai: 92.3,
-      kehadiran: 98,
-      tugasSelesai: 48,
-      totalTugas: 48,
-      ranking: 1,
-      trend: 'up'
-    },
-    {
-      id: 3,
-      nis: '202401003',
-      nama: 'Budi Santoso',
-      kelas: 'XII RPL 2',
-      jurusan: 'RPL',
-      avgNilai: 78.5,
-      kehadiran: 85,
-      tugasSelesai: 40,
-      totalTugas: 48,
-      ranking: 15,
-      trend: 'down'
-    },
-    {
-      id: 4,
-      nis: '202401004',
-      nama: 'Dewi Lestari',
-      kelas: 'XII TKJ 1',
-      jurusan: 'TKJ',
-      avgNilai: 89.0,
-      kehadiran: 95,
-      tugasSelesai: 46,
-      totalTugas: 48,
-      ranking: 2,
-      trend: 'up'
-    },
-  ];
+  // Data laporan siswa dari mock pusat
+  const laporanData = getLaporanSiswa();
+
+  const avgNilaiAll = laporanData.length > 0
+    ? Math.round((laporanData.reduce((sum, s) => sum + s.avgNilai, 0) / laporanData.length) * 10) / 10
+    : 0;
+  const avgKehadiranAll = laporanData.length > 0
+    ? Math.round((laporanData.reduce((sum, s) => sum + s.kehadiran, 0) / laporanData.length) * 10) / 10
+    : 0;
+  const tugasOnTimePct = laporanData.length > 0 && laporanData[0].totalTugas > 0
+    ? Math.round((laporanData.reduce((sum, s) => sum + s.tugasSelesai, 0) /
+        laporanData.reduce((sum, s) => sum + Math.max(s.totalTugas, 1), 0)) * 100)
+    : 0;
 
   const summary = {
-    totalSiswa: 1189,
-    avgKehadiran: 89.5,
-    avgNilai: 82.3,
-    tugasOnTime: 85
+    totalSiswa: laporanData.length,
+    avgKehadiran: avgKehadiranAll,
+    avgNilai: avgNilaiAll,
+    tugasOnTime: tugasOnTimePct,
   };
 
   const summaryStats = [
@@ -129,25 +89,20 @@ const LaporanSiswa = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Laporan Siswa</h1>
-          <p className="mt-2 text-gray-600">
-            Laporan lengkap performa siswa per periode
-          </p>
-        </div>
-        
-        {/* Export Buttons */}
-        <div className="mt-4 md:mt-0 flex gap-2">
-          <Button variant="primary" size="sm" icon={Download} onClick={() => handleExport('PDF')}>
-            Export PDF
-          </Button>
-          <Button variant="primary" size="sm" icon={Download} onClick={() => handleExport('Excel')}>
-            Export Excel
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Laporan Siswa"
+        subtitle="Laporan lengkap performa siswa per periode"
+        actions={
+          <>
+            <Button variant="outline" size="sm" icon={Download} onClick={() => handleExport('PDF')}>
+              Export PDF
+            </Button>
+            <Button variant="primary" size="sm" icon={Download} onClick={() => handleExport('Excel')}>
+              Export Excel
+            </Button>
+          </>
+        }
+      />
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Save, Search, Filter } from 'lucide-react';
+import { Save, Users, Filter } from 'lucide-react';
 import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
+import Badge from '../../components/common/Badge';
+import PageHeader from '../../components/common/PageHeader';
+import Input from '../../components/common/Input';
 import nilaiService from '../../services/nilaiService';
+import masterDataService from '../../services/masterDataService';
 
 const Nilai = () => {
   const [loading, setLoading] = useState(false);
@@ -19,6 +22,35 @@ const Nilai = () => {
   // Allowed data from jadwal (authorization)
   const [allowedMapel, setAllowedMapel] = useState([]);
   const [allowedKelas, setAllowedKelas] = useState([]);
+  const [availableKelasForMapel, setAvailableKelasForMapel] = useState([]);
+
+  // Update available kelas when mata pelajaran changes
+  useEffect(() => {
+    if (selectedMapel) {
+      loadKelasForMapel(selectedMapel);
+    } else {
+      setAvailableKelasForMapel([]);
+      setSelectedKelas('');
+    }
+  }, [selectedMapel]);
+
+  const loadKelasForMapel = async (mataPelajaranId) => {
+    try {
+      const kelasResponse = await masterDataService.getAllKelas(mataPelajaranId);
+      setAvailableKelasForMapel(kelasResponse.data);
+      
+      // Reset kelas selection if current kelas not in available list
+      if (selectedKelas) {
+        const isKelasAvailable = kelasResponse.data.some(k => k.id === parseInt(selectedKelas));
+        if (!isKelasAvailable) {
+          setSelectedKelas('');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading kelas for mapel:', error);
+      setAvailableKelasForMapel([]);
+    }
+  };
 
   // Load allowed mapel & kelas (from jadwal mengajar)
   useEffect(() => {
@@ -34,27 +66,16 @@ const Nilai = () => {
 
   const loadAllowedData = async () => {
     try {
-      // TODO: Replace with actual API endpoint
-      // const response = await api.get('/guru/mapel-kelas');
+      // Load mata pelajaran yang diajar guru
+      const mapelResponse = await masterDataService.getAllMataPelajaran();
+      setAllowedMapel(mapelResponse.data);
       
-      // Mock data - will be replaced with API call
-      const mockData = {
-        mata_pelajaran: [
-          { id: 1, nama: 'Pemrograman Web', kode: 'PWEB' },
-          { id: 2, nama: 'Database', kode: 'DB' },
-        ],
-        kelas: [
-          { id: 1, nama: 'XII RPL 1' },
-          { id: 2, nama: 'XII RPL 2' },
-          { id: 3, nama: 'XI RPL 1' },
-        ],
-      };
-      
-      setAllowedMapel(mockData.mata_pelajaran);
-      setAllowedKelas(mockData.kelas);
+      // Load semua kelas (akan difilter otomatis per mapel saat dipilih)
+      const kelasResponse = await masterDataService.getAllKelas();
+      setAllowedKelas(kelasResponse.data);
     } catch (error) {
       console.error('Error loading allowed data:', error);
-      alert('Gagal memuat data mata pelajaran dan kelas');
+      alert(error.message || 'Gagal memuat data mata pelajaran dan kelas');
     }
   };
 
@@ -148,12 +169,11 @@ const Nilai = () => {
   };
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Input Nilai</h1>
-        <p className="text-gray-600">Input nilai siswa per kelas dan mata pelajaran</p>
-      </div>
+    <div>
+      <PageHeader
+        title="Input Nilai"
+        subtitle="Input nilai siswa per kelas dan mata pelajaran"
+      />
 
       {/* Filter Card */}
       <Card className="mb-6">
@@ -161,25 +181,6 @@ const Nilai = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter Data</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Kelas */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Kelas <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={selectedKelas}
-                onChange={(e) => setSelectedKelas(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Pilih Kelas</option>
-                {allowedKelas.map((kelas) => (
-                  <option key={kelas.id} value={kelas.id}>
-                    {kelas.nama}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Mata Pelajaran */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -194,6 +195,28 @@ const Nilai = () => {
                 {allowedMapel.map((mapel) => (
                   <option key={mapel.id} value={mapel.id}>
                     {mapel.nama} ({mapel.kode})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Kelas */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Kelas <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedKelas}
+                onChange={(e) => setSelectedKelas(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                disabled={!selectedMapel}
+              >
+                <option value="">
+                  {selectedMapel ? 'Pilih Kelas' : 'Pilih Mata Pelajaran dulu'}
+                </option>
+                {availableKelasForMapel.map((kelas) => (
+                  <option key={kelas.id} value={kelas.id}>
+                    {kelas.nama}
                   </option>
                 ))}
               </select>

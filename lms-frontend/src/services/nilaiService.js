@@ -1,48 +1,14 @@
 import api from './api';
-
-// Mock data untuk development
-const mockNilai = [
-  {
-    id: 1,
-    siswa: { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
-    mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    jenis: 'tugas', // tugas, uts, uas
-    nilai: 85,
-    keterangan: 'Website Portfolio',
-    created_at: '2024-02-12T10:00:00Z',
-  },
-  {
-    id: 2,
-    siswa: { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
-    mata_pelajaran: { id: 2, nama: 'Basis Data' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    jenis: 'tugas',
-    nilai: 90,
-    keterangan: 'Query MySQL',
-    created_at: '2024-02-19T08:30:00Z',
-  },
-  {
-    id: 3,
-    siswa: { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
-    mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    jenis: 'uts',
-    nilai: 88,
-    keterangan: 'UTS Semester 2',
-    created_at: '2024-02-20T08:00:00Z',
-  },
-  {
-    id: 4,
-    siswa: { id: 5, nama: 'Dewi Lestari', nis: '12346' },
-    mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    jenis: 'tugas',
-    nilai: 78,
-    keterangan: 'Website Portfolio',
-    created_at: '2024-02-13T14:00:00Z',
-  },
-];
+import {
+  nilai as mockNilai,
+  getCurrentUser,
+  validateTeacherAssignment,
+  enrichMataPelajaran,
+  enrichKelas,
+  enrichSiswa,
+  getSiswaByKelas,
+  mockDelay,
+} from '../mocks/academicMock';
 
 /**
  * Get all nilai with filters
@@ -56,24 +22,45 @@ export const getAllNilai = async (params = {}) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await mockDelay(500);
     
+    const currentUser = getCurrentUser();
     let filtered = [...mockNilai];
     
+    // Filter by role
+    if (currentUser) {
+      if (currentUser.role === 'guru') {
+        // Guru hanya melihat nilai yang dia input
+        filtered = filtered.filter(n => n.guru_id === currentUser.id);
+      } else if (currentUser.role === 'siswa') {
+        // Siswa hanya melihat nilainya sendiri
+        filtered = filtered.filter(n => n.siswa_id === currentUser.id);
+      }
+      // Admin melihat semua
+    }
+    
     if (params.mata_pelajaran_id) {
-      filtered = filtered.filter(n => n.mata_pelajaran.id === parseInt(params.mata_pelajaran_id));
+      filtered = filtered.filter(n => n.mata_pelajaran_id === parseInt(params.mata_pelajaran_id));
     }
     if (params.kelas_id) {
-      filtered = filtered.filter(n => n.kelas.id === parseInt(params.kelas_id));
+      filtered = filtered.filter(n => n.kelas_id === parseInt(params.kelas_id));
     }
     if (params.jenis) {
       filtered = filtered.filter(n => n.jenis === params.jenis);
     }
     if (params.siswa_id) {
-      filtered = filtered.filter(n => n.siswa.id === parseInt(params.siswa_id));
+      filtered = filtered.filter(n => n.siswa_id === parseInt(params.siswa_id));
     }
     
-    return { data: filtered };
+    // Enrich data
+    const enriched = filtered.map(n => ({
+      ...n,
+      siswa: enrichSiswa(n.siswa_id),
+      mata_pelajaran: enrichMataPelajaran(n.mata_pelajaran_id),
+      kelas: enrichKelas(n.kelas_id),
+    }));
+    
+    return { data: enriched };
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -95,34 +82,34 @@ export const getNilaiByKelas = async (kelasId, mataPelajaranId, jenis) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await mockDelay(400);
     
-    // Mock siswa list untuk kelas
-    const siswaList = [
-      { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
-      { id: 5, nama: 'Dewi Lestari', nis: '12346' },
-      { id: 6, nama: 'Budi Setiawan', nis: '12347' },
-      { id: 7, nama: 'Siti Aminah', nis: '12348' },
-      { id: 8, nama: 'Eko Prasetyo', nis: '12349' },
-    ];
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.role === 'guru') {
+      // Validate guru mengajar di kelas/mapel ini
+      validateTeacherAssignment(currentUser.id, mataPelajaranId, kelasId);
+    }
+    
+    // Get siswa list untuk kelas
+    const siswaList = getSiswaByKelas(kelasId);
 
     // Get existing nilai for these students
     const existingNilai = mockNilai.filter(n => 
-      n.kelas.id === parseInt(kelasId) && 
-      n.mata_pelajaran.id === parseInt(mataPelajaranId) &&
+      n.kelas_id === parseInt(kelasId) && 
+      n.mata_pelajaran_id === parseInt(mataPelajaranId) &&
       n.jenis === jenis
     );
 
     // Combine siswa list with their nilai (if exists)
     const result = siswaList.map(siswa => {
-      const nilai = existingNilai.find(n => n.siswa.id === siswa.id);
+      const nilaiData = existingNilai.find(n => n.siswa_id === siswa.id);
       return {
         siswa_id: siswa.id,
-        siswa_nama: siswa.nama,
+        siswa_nama: siswa.name,
         siswa_nis: siswa.nis,
-        nilai: nilai?.nilai || null,
-        keterangan: nilai?.keterangan || '',
-        nilai_id: nilai?.id || null,
+        nilai: nilaiData?.nilai || null,
+        keterangan: nilaiData?.keterangan || '',
+        nilai_id: nilaiData?.id || null,
       };
     });
     
@@ -144,16 +131,25 @@ export const bulkInputNilai = async (data) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await mockDelay(800);
+    
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'guru') {
+      throw { status: 403, message: 'Hanya guru yang dapat input nilai' };
+    }
+    
+    // Validate teaching assignment
+    validateTeacherAssignment(currentUser.id, data.mata_pelajaran_id, data.kelas_id);
     
     // Simulate saving data
     data.nilai_list.forEach((item, index) => {
       if (item.nilai !== null && item.nilai !== '') {
         const newNilai = {
           id: mockNilai.length + index + 1,
-          siswa: { id: item.siswa_id, nama: item.siswa_nama, nis: item.siswa_nis },
-          mata_pelajaran: { id: data.mata_pelajaran_id, nama: 'Pemrograman Web' },
-          kelas: { id: data.kelas_id, nama: 'XII RPL 1' },
+          siswa_id: item.siswa_id,
+          guru_id: currentUser.id,
+          mata_pelajaran_id: data.mata_pelajaran_id,
+          kelas_id: data.kelas_id,
           jenis: data.jenis,
           nilai: parseInt(item.nilai),
           keterangan: item.keterangan || data.keterangan || '',
@@ -162,8 +158,8 @@ export const bulkInputNilai = async (data) => {
         
         // Check if nilai already exists (update) or new (create)
         const existingIndex = mockNilai.findIndex(n => 
-          n.siswa.id === item.siswa_id &&
-          n.mata_pelajaran.id === data.mata_pelajaran_id &&
+          n.siswa_id === item.siswa_id &&
+          n.mata_pelajaran_id === data.mata_pelajaran_id &&
           n.jenis === data.jenis
         );
 
@@ -193,19 +189,31 @@ export const getMyNilai = async (params = {}) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await mockDelay(400);
     
-    // Filter nilai for current user (mock: siswa id 4)
-    let filtered = mockNilai.filter(n => n.siswa.id === 4);
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'siswa') {
+      throw { status: 403, message: 'Hanya siswa yang dapat melihat nilai mereka' };
+    }
+    
+    // Filter nilai for current user
+    let filtered = mockNilai.filter(n => n.siswa_id === currentUser.id);
     
     if (params.mata_pelajaran_id) {
-      filtered = filtered.filter(n => n.mata_pelajaran.id === parseInt(params.mata_pelajaran_id));
+      filtered = filtered.filter(n => n.mata_pelajaran_id === parseInt(params.mata_pelajaran_id));
     }
     if (params.jenis) {
       filtered = filtered.filter(n => n.jenis === params.jenis);
     }
     
-    return { data: filtered };
+    // Enrich data
+    const enriched = filtered.map(n => ({
+      ...n,
+      mata_pelajaran: enrichMataPelajaran(n.mata_pelajaran_id),
+      kelas: enrichKelas(n.kelas_id),
+    }));
+    
+    return { data: enriched };
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -223,9 +231,14 @@ export const getNilaiSummary = async () => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await mockDelay(300);
     
-    const myNilai = mockNilai.filter(n => n.siswa.id === 4);
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'siswa') {
+      throw { status: 403, message: 'Hanya siswa yang dapat melihat summary nilai mereka' };
+    }
+    
+    const myNilai = mockNilai.filter(n => n.siswa_id === currentUser.id);
     
     if (myNilai.length === 0) {
       return {
@@ -268,17 +281,23 @@ export const getNilaiByMapel = async () => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await mockDelay(400);
     
-    const myNilai = mockNilai.filter(n => n.siswa.id === 4);
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'siswa') {
+      throw { status: 403, message: 'Hanya siswa yang dapat melihat nilai mereka' };
+    }
+    
+    const myNilai = mockNilai.filter(n => n.siswa_id === currentUser.id);
     
     // Group by mata pelajaran
     const grouped = {};
     myNilai.forEach(n => {
-      const mapelId = n.mata_pelajaran.id;
+      const mapelId = n.mata_pelajaran_id;
       if (!grouped[mapelId]) {
+        const mapel = enrichMataPelajaran(mapelId);
         grouped[mapelId] = {
-          mata_pelajaran: n.mata_pelajaran.nama,
+          mata_pelajaran: mapel.nama,
           nilai: [],
         };
       }

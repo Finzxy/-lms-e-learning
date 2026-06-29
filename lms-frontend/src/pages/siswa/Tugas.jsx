@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Search, Clock, CheckCircle, AlertCircle, FileText, Upload } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Upload, ClipboardList } from 'lucide-react';
 import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
-import Modal from '../../components/common/Modal';
-import FileUpload from '../../components/common/FileUpload';
 import Badge from '../../components/common/Badge';
+import Modal from '../../components/common/Modal';
+import PageHeader from '../../components/common/PageHeader';
+import SearchFilterBar from '../../components/common/SearchFilterBar';
+import EmptyState from '../../components/common/EmptyState';
 import tugasService from '../../services/tugasService';
 
 const Tugas = () => {
@@ -204,22 +205,17 @@ const Tugas = () => {
   });
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Tugas Saya</h1>
-        <p className="text-gray-600">Lihat dan kumpulkan tugas yang diberikan</p>
-      </div>
+    <div>
+      <PageHeader
+        title="Tugas Saya"
+        subtitle="Lihat dan kumpulkan tugas yang diberikan"
+      />
 
-      {/* Search Bar */}
-      <Card className="mb-6">
-        <Input
-          icon={Search}
-          placeholder="Cari tugas..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </Card>
+      <SearchFilterBar
+        searchValue={searchQuery}
+        onSearchChange={(e) => setSearchQuery(e.target.value)}
+        searchPlaceholder="Cari tugas..."
+      />
 
       {/* Tabs */}
       <div className="mb-6 border-b border-gray-200">

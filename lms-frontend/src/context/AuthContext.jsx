@@ -15,20 +15,8 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  // DEVELOPMENT ONLY: Mock user for testing
-  useEffect(() => {
-    if (!user && !loading) {
-      // Set mock admin user for development
-      const mockUser = {
-        id: 1,
-        name: 'Admin User',
-        email: 'admin@test.local',
-        role: 'admin'
-      };
-      setUser(mockUser);
-      setIsAuthenticated(true);
-    }
-  }, [user, loading]);
+
+
 
   /**
    * Check authentication status

@@ -3,6 +3,7 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
+import PageHeader from '../../components/common/PageHeader';
 import { 
   Plus,
   Edit,
@@ -122,21 +123,15 @@ const Roles = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Role & Permission</h1>
-          <p className="mt-2 text-gray-600">
-            Kelola role pengguna dan hak akses sistem
-          </p>
-        </div>
-        
-        <div className="mt-4 md:mt-0">
+      <PageHeader
+        title="Role & Permission"
+        subtitle="Kelola role pengguna dan hak akses sistem"
+        actions={
           <Button variant="primary" icon={Plus} onClick={handleAdd}>
             Tambah Role
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Roles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

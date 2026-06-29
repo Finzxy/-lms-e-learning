@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, FileText } from 'lucide-react';
+import { Plus, FileText } from 'lucide-react';
 import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
+import Input from '../../components/common/Input';
 import FileUpload from '../../components/common/FileUpload';
 import Badge from '../../components/common/Badge';
 import ActionButtons from '../../components/common/ActionButtons';
+import PageHeader from '../../components/common/PageHeader';
+import SearchFilterBar from '../../components/common/SearchFilterBar';
+import EmptyState from '../../components/common/EmptyState';
 import materiService from '../../services/materiService';
+import masterDataService from '../../services/masterDataService';
 
 const Materi = () => {
   const [materi, setMateri] = useState([]);
@@ -31,6 +35,34 @@ const Materi = () => {
     file: null,
   });
   const [formErrors, setFormErrors] = useState({});
+  const [availableKelasForForm, setAvailableKelasForForm] = useState([]);
+
+  // Update available kelas when mata pelajaran changes in form
+  useEffect(() => {
+    if (formData.mata_pelajaran_id) {
+      loadKelasForMapel(formData.mata_pelajaran_id);
+    } else {
+      setAvailableKelasForForm([]);
+    }
+  }, [formData.mata_pelajaran_id]);
+
+  const loadKelasForMapel = async (mataPelajaranId) => {
+    try {
+      const kelasResponse = await masterDataService.getAllKelas(mataPelajaranId);
+      setAvailableKelasForForm(kelasResponse.data);
+      
+      // Reset kelas selection if current kelas not in available list
+      if (formData.kelas_id) {
+        const isKelasAvailable = kelasResponse.data.some(k => k.id === parseInt(formData.kelas_id));
+        if (!isKelasAvailable) {
+          setFormData(prev => ({ ...prev, kelas_id: '' }));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading kelas for mapel:', error);
+      setAvailableKelasForForm([]);
+    }
+  };
 
   // Load allowed mapel & kelas (from jadwal mengajar)
   useEffect(() => {
@@ -44,27 +76,17 @@ const Materi = () => {
 
   const loadAllowedData = async () => {
     try {
-      // TODO: Replace with actual API endpoint
-      // const response = await api.get('/guru/mapel-kelas');
+      // Load mata pelajaran yang diajar guru
+      const mapelResponse = await masterDataService.getAllMataPelajaran();
+      setAllowedMapel(mapelResponse.data);
       
-      // Mock data - will be replaced with API call
-      const mockData = {
-        mata_pelajaran: [
-          { id: 1, nama: 'Pemrograman Web', kode: 'PWEB' },
-          { id: 2, nama: 'Database', kode: 'DB' },
-        ],
-        kelas: [
-          { id: 1, nama: 'XII RPL 1' },
-          { id: 2, nama: 'XII RPL 2' },
-          { id: 3, nama: 'XI RPL 1' },
-        ],
-      };
-      
-      setAllowedMapel(mockData.mata_pelajaran);
-      setAllowedKelas(mockData.kelas);
+      // Load semua kelas (akan difilter otomatis per mapel saat dipilih)
+      // Untuk initial load, kita load semua kelas yang mungkin
+      const kelasResponse = await masterDataService.getAllKelas();
+      setAllowedKelas(kelasResponse.data);
     } catch (error) {
       console.error('Error loading allowed data:', error);
-      alert('Gagal memuat data mata pelajaran dan kelas');
+      alert(error.message || 'Gagal memuat data mata pelajaran dan kelas');
     }
   };
 
@@ -143,6 +165,8 @@ const Materi = () => {
     const errors = {};
     if (!formData.judul.trim()) errors.judul = 'Judul harus diisi';
     if (!formData.deskripsi.trim()) errors.deskripsi = 'Deskripsi harus diisi';
+    if (!formData.mata_pelajaran_id) errors.mata_pelajaran_id = 'Mata pelajaran harus dipilih';
+    if (!formData.kelas_id) errors.kelas_id = 'Kelas harus dipilih';
     if (!editingMateri && !formData.file) errors.file = 'File harus diupload';
     
     setFormErrors(errors);
@@ -162,8 +186,8 @@ const Materi = () => {
       const data = new FormData();
       data.append('judul', formData.judul);
       data.append('deskripsi', formData.deskripsi);
-      data.append('mata_pelajaran_id', formData.mata_pelajaran_id || 1);
-      data.append('kelas_id', formData.kelas_id || 1);
+      data.append('mata_pelajaran_id', formData.mata_pelajaran_id);
+      data.append('kelas_id', formData.kelas_id);
       if (formData.file) {
         data.append('file', formData.file);
       }
@@ -234,71 +258,44 @@ const Materi = () => {
   };
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Materi Pembelajaran</h1>
-        <p className="text-gray-600">Kelola materi pembelajaran untuk siswa</p>
-      </div>
+    <div>
+      <PageHeader
+        title="Materi Pembelajaran"
+        subtitle="Kelola materi pembelajaran untuk siswa"
+        actions={
+          <Button variant="primary" onClick={() => handleOpenModal()}>
+            <Plus className="w-4 h-4" />
+            Upload Materi
+          </Button>
+        }
+      />
 
-      {/* Actions Bar */}
-      <Card className="mb-6">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          {/* Search */}
-          <div className="w-full md:w-96">
-            <Input
-              icon={Search}
-              placeholder="Cari materi..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+      <SearchFilterBar
+        searchValue={searchQuery}
+        onSearchChange={(e) => setSearchQuery(e.target.value)}
+        searchPlaceholder="Cari materi..."
+        filters={[
+          {
+            value: filterMapel,
+            onChange: (e) => setFilterMapel(e.target.value),
+            placeholder: 'Semua Mata Pelajaran',
+            options: allowedMapel.map(m => ({ value: m.id, label: m.nama })),
+          },
+          {
+            value: filterKelas,
+            onChange: (e) => setFilterKelas(e.target.value),
+            placeholder: 'Semua Kelas',
+            options: allowedKelas.map(k => ({ value: k.id, label: k.nama })),
+          },
+        ]}
+      />
 
-          {/* Filters & Add Button */}
-          <div className="flex gap-2 w-full md:w-auto">
-            {/* Filter Mata Pelajaran */}
-            <select
-              value={filterMapel}
-              onChange={(e) => setFilterMapel(e.target.value)}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="">Semua Mata Pelajaran</option>
-              {allowedMapel.map((mapel) => (
-                <option key={mapel.id} value={mapel.id}>
-                  {mapel.nama}
-                </option>
-              ))}
-            </select>
 
-            {/* Filter Kelas */}
-            <select
-              value={filterKelas}
-              onChange={(e) => setFilterKelas(e.target.value)}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="">Semua Kelas</option>
-              {allowedKelas.map((kelas) => (
-                <option key={kelas.id} value={kelas.id}>
-                  {kelas.nama}
-                </option>
-              ))}
-            </select>
-
-            <Button
-              icon={Plus}
-              onClick={() => handleOpenModal()}
-            >
-              Upload Materi
-            </Button>
-          </div>
-        </div>
-      </Card>
 
       {/* Materi Grid */}
       {loading && materi.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="mt-2 text-gray-600">Memuat data...</p>
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-primary" />
         </div>
       ) : materi.length === 0 ? (
         <Card>
@@ -452,9 +449,12 @@ const Materi = () => {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 required
+                disabled={!formData.mata_pelajaran_id}
               >
-                <option value="">Pilih Kelas</option>
-                {allowedKelas.map((kelas) => (
+                <option value="">
+                  {formData.mata_pelajaran_id ? 'Pilih Kelas' : 'Pilih Mata Pelajaran dulu'}
+                </option>
+                {availableKelasForForm.map((kelas) => (
                   <option key={kelas.id} value={kelas.id}>
                     {kelas.nama}
                   </option>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, CheckCircle, AlertCircle, XCircle, Clock } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
+import PageHeader from '../../components/common/PageHeader';
 import absensiService from '../../services/absensiService';
 
 const Absensi = () => {
@@ -86,18 +87,16 @@ const Absensi = () => {
   };
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Absensi Saya</h1>
-        <p className="text-gray-600">Lihat rekap kehadiran Anda</p>
-      </div>
+    <div>
+      <PageHeader
+        title="Absensi Saya"
+        subtitle="Lihat rekap kehadiran Anda"
+      />
 
       {/* Summary Cards */}
       {loading && !summary ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="mt-2 text-gray-600">Memuat data...</p>
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-primary" />
         </div>
       ) : summary ? (
         <>
@@ -114,7 +113,7 @@ const Absensi = () => {
             {/* Hadir */}
             <Card className="bg-gray-50 border-gray-200">
               <div className="text-center">
-                <CheckCircle className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+                <CheckCircle className="w-6 h-6 mx-auto mb-2 text-green-500" />
                 <p className="text-gray-600 text-sm mb-1">Hadir</p>
                 <p className="text-3xl font-bold text-gray-900">{summary.hadir}</p>
                 <p className="text-xs text-gray-500 mt-1">{summary.persentase_hadir}%</p>
@@ -124,7 +123,7 @@ const Absensi = () => {
             {/* Sakit */}
             <Card className="bg-gray-50 border-gray-200">
               <div className="text-center">
-                <AlertCircle className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+                <AlertCircle className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
                 <p className="text-gray-600 text-sm mb-1">Sakit</p>
                 <p className="text-3xl font-bold text-gray-900">{summary.sakit}</p>
               </div>
@@ -133,7 +132,7 @@ const Absensi = () => {
             {/* Izin */}
             <Card className="bg-gray-50 border-gray-200">
               <div className="text-center">
-                <Clock className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+                <Clock className="w-6 h-6 mx-auto mb-2 text-blue-500" />
                 <p className="text-gray-600 text-sm mb-1">Izin</p>
                 <p className="text-3xl font-bold text-gray-900">{summary.izin}</p>
               </div>
@@ -142,7 +141,7 @@ const Absensi = () => {
             {/* Alpha */}
             <Card className="bg-gray-50 border-gray-200">
               <div className="text-center">
-                <XCircle className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+                <XCircle className="w-6 h-6 mx-auto mb-2 text-red-500" />
                 <p className="text-gray-600 text-sm mb-1">Alpha</p>
                 <p className="text-3xl font-bold text-gray-900">{summary.alpha}</p>
               </div>

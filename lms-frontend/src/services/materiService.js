@@ -1,47 +1,21 @@
 import api from './api';
+import {
+  materi as mockMateri,
+  getCurrentUser,
+  validateTeacherAssignment,
+  enrichMataPelajaran,
+  enrichKelas,
+  enrichGuru,
+  mockDelay,
+} from '../mocks/academicMock';
 
-// Mock data untuk development
-const mockMateri = [
-  {
-    id: 1,
-    judul: 'Pengenalan Pemrograman Web',
-    deskripsi: 'Materi dasar tentang HTML, CSS, dan JavaScript',
-    mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    guru: { id: 2, nama: 'Budi Santoso' },
-    file_name: 'pemrograman-web-intro.pdf',
-    file_size: 2048576, // 2MB
-    file_url: '/files/materi/pemrograman-web-intro.pdf',
-    created_at: '2024-01-15T08:00:00Z',
-    updated_at: '2024-01-15T08:00:00Z',
-  },
-  {
-    id: 2,
-    judul: 'Database MySQL',
-    deskripsi: 'Panduan lengkap penggunaan MySQL untuk aplikasi web',
-    mata_pelajaran: { id: 2, nama: 'Basis Data' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    guru: { id: 2, nama: 'Budi Santoso' },
-    file_name: 'mysql-guide.pdf',
-    file_size: 3145728, // 3MB
-    file_url: '/files/materi/mysql-guide.pdf',
-    created_at: '2024-01-16T10:30:00Z',
-    updated_at: '2024-01-16T10:30:00Z',
-  },
-  {
-    id: 3,
-    judul: 'Algoritma Sorting',
-    deskripsi: 'Penjelasan berbagai algoritma sorting: Bubble, Quick, Merge Sort',
-    mata_pelajaran: { id: 3, nama: 'Algoritma' },
-    kelas: { id: 2, nama: 'XII RPL 2' },
-    guru: { id: 3, nama: 'Siti Rahayu' },
-    file_name: 'sorting-algorithms.pdf',
-    file_size: 1572864, // 1.5MB
-    file_url: '/files/materi/sorting-algorithms.pdf',
-    created_at: '2024-01-17T13:00:00Z',
-    updated_at: '2024-01-17T13:00:00Z',
-  },
-];
+// Helper to enrich materi with full data
+const enrichMateri = (m) => ({
+  ...m,
+  mata_pelajaran: enrichMataPelajaran(m.mata_pelajaran_id),
+  kelas: enrichKelas(m.kelas_id),
+  guru: enrichGuru(m.guru_id),
+});
 
 /**
  * Get all materi with optional filters
@@ -55,16 +29,29 @@ export const getAllMateri = async (params = {}) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    await mockDelay(500);
     
+    const currentUser = getCurrentUser();
     let filtered = [...mockMateri];
     
-    // Apply filters
+    // Filter by role
+    if (currentUser) {
+      if (currentUser.role === 'guru') {
+        // Guru hanya melihat materi yang dia buat
+        filtered = filtered.filter(m => m.guru_id === currentUser.id);
+      } else if (currentUser.role === 'siswa') {
+        // Siswa hanya melihat materi untuk kelasnya
+        filtered = filtered.filter(m => m.kelas_id === currentUser.kelas_id);
+      }
+      // Admin melihat semua
+    }
+    
+    // Apply additional filters
     if (params.mata_pelajaran_id) {
-      filtered = filtered.filter(m => m.mata_pelajaran.id === parseInt(params.mata_pelajaran_id));
+      filtered = filtered.filter(m => m.mata_pelajaran_id === parseInt(params.mata_pelajaran_id));
     }
     if (params.kelas_id) {
-      filtered = filtered.filter(m => m.kelas.id === parseInt(params.kelas_id));
+      filtered = filtered.filter(m => m.kelas_id === parseInt(params.kelas_id));
     }
     if (params.search) {
       const search = params.search.toLowerCase();
@@ -74,9 +61,12 @@ export const getAllMateri = async (params = {}) => {
       );
     }
     
+    // Enrich with full data
+    const enriched = filtered.map(enrichMateri);
+    
     return {
-      data: filtered,
-      total: filtered.length,
+      data: enriched,
+      total: enriched.length,
     };
   } catch (error) {
     throw error.response?.data || error;
@@ -95,12 +85,22 @@ export const getMateriById = async (id) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await mockDelay(300);
     const materi = mockMateri.find(m => m.id === parseInt(id));
     if (!materi) {
       throw { message: 'Materi tidak ditemukan' };
     }
-    return { data: materi };
+    
+    const currentUser = getCurrentUser();
+    // Check access
+    if (currentUser && currentUser.role === 'guru' && materi.guru_id !== currentUser.id) {
+      throw { status: 403, message: 'Anda tidak memiliki akses ke materi ini' };
+    }
+    if (currentUser && currentUser.role === 'siswa' && materi.kelas_id !== currentUser.kelas_id) {
+      throw { status: 403, message: 'Anda tidak memiliki akses ke materi ini' };
+    }
+    
+    return { data: enrichMateri(materi) };
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -122,15 +122,26 @@ export const createMateri = async (formData) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate upload
+    await mockDelay(800);
+    
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'guru') {
+      throw { status: 403, message: 'Hanya guru yang dapat membuat materi' };
+    }
+    
+    const mataPelajaranId = parseInt(formData.get('mata_pelajaran_id'));
+    const kelasId = parseInt(formData.get('kelas_id'));
+    
+    // Validate teaching assignment
+    validateTeacherAssignment(currentUser.id, mataPelajaranId, kelasId);
     
     const newMateri = {
       id: mockMateri.length + 1,
       judul: formData.get('judul'),
       deskripsi: formData.get('deskripsi'),
-      mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-      kelas: { id: 1, nama: 'XII RPL 1' },
-      guru: { id: 2, nama: 'Budi Santoso' },
+      guru_id: currentUser.id,
+      mata_pelajaran_id: mataPelajaranId,
+      kelas_id: kelasId,
       file_name: formData.get('file')?.name || 'file.pdf',
       file_size: formData.get('file')?.size || 0,
       file_url: '/files/materi/new-file.pdf',
@@ -139,7 +150,7 @@ export const createMateri = async (formData) => {
     };
     
     mockMateri.push(newMateri);
-    return { data: newMateri, message: 'Materi berhasil ditambahkan' };
+    return { data: enrichMateri(newMateri), message: 'Materi berhasil ditambahkan' };
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -162,11 +173,16 @@ export const updateMateri = async (id, formData) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await mockDelay(800);
     
     const index = mockMateri.findIndex(m => m.id === parseInt(id));
     if (index === -1) {
       throw { message: 'Materi tidak ditemukan' };
+    }
+    
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.role === 'guru' && mockMateri[index].guru_id !== currentUser.id) {
+      throw { status: 403, message: 'Anda tidak dapat mengubah materi orang lain' };
     }
     
     mockMateri[index] = {
@@ -176,7 +192,7 @@ export const updateMateri = async (id, formData) => {
       updated_at: new Date().toISOString(),
     };
     
-    return { data: mockMateri[index], message: 'Materi berhasil diupdate' };
+    return { data: enrichMateri(mockMateri[index]), message: 'Materi berhasil diupdate' };
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -194,11 +210,16 @@ export const deleteMateri = async (id) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await mockDelay(500);
     
     const index = mockMateri.findIndex(m => m.id === parseInt(id));
     if (index === -1) {
       throw { message: 'Materi tidak ditemukan' };
+    }
+    
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.role === 'guru' && mockMateri[index].guru_id !== currentUser.id) {
+      throw { status: 403, message: 'Anda tidak dapat menghapus materi orang lain' };
     }
     
     mockMateri.splice(index, 1);
@@ -222,7 +243,7 @@ export const downloadMateri = async (id) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await mockDelay(500);
     alert(`Mock: Downloading materi ${id}`);
     return { message: 'Download started' };
   } catch (error) {

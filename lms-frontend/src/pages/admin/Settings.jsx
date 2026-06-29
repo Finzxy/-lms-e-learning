@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
+import PageHeader from '../../components/common/PageHeader';
 import { 
   Save,
   Settings as SettingsIcon,
@@ -68,26 +69,19 @@ const Settings = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Pengaturan Sistem</h1>
-          <p className="mt-2 text-gray-600">
-            Konfigurasi sistem dan preferensi aplikasi
-          </p>
-        </div>
-        
-        <div className="mt-4 md:mt-0">
-          <Button 
-            variant="primary" 
-            icon={saved ? CheckCircle : Save} 
+      <PageHeader
+        title="Pengaturan Sistem"
+        subtitle="Konfigurasi sistem dan preferensi aplikasi"
+        actions={
+          <Button
+            variant={saved ? 'success' : 'primary'}
+            icon={saved ? CheckCircle : Save}
             onClick={handleSave}
-            className={saved ? 'bg-green-600 hover:bg-green-700' : ''}
           >
             {saved ? 'Tersimpan!' : 'Simpan Perubahan'}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Aplikasi Settings */}
       <Card>

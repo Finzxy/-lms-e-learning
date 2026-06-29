@@ -3,6 +3,7 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import StatCard from '../../components/common/StatCard';
+import PageHeader from '../../components/common/PageHeader';
 import { 
   Download, 
   TrendingUp,
@@ -104,32 +105,26 @@ const Statistik = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Statistik Sistem</h1>
-          <p className="mt-2 text-gray-600">
-            Statistik lengkap dan analisis performa sistem
-          </p>
-        </div>
-        
-        <div className="mt-4 md:mt-0 flex gap-2">
-          {/* Period Selector */}
-          <select
-            value={periode}
-            onChange={(e) => setPeriode(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="bulan">Bulan Ini</option>
-            <option value="semester">Semester Ini</option>
-            <option value="tahun">Tahun Ajaran</option>
-          </select>
-          
-          <Button variant="primary" size="sm" icon={Download} onClick={handleExport}>
-            Export
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Statistik Sistem"
+        subtitle="Statistik lengkap dan analisis performa sistem"
+        actions={
+          <div className="flex gap-2">
+            <select
+              value={periode}
+              onChange={(e) => setPeriode(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+            >
+              <option value="bulan">Bulan Ini</option>
+              <option value="semester">Semester Ini</option>
+              <option value="tahun">Tahun Ajaran</option>
+            </select>
+            <Button variant="primary" size="sm" icon={Download} onClick={handleExport}>
+              Export
+            </Button>
+          </div>
+        }
+      />
 
       {/* Overall Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

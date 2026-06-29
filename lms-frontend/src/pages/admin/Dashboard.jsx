@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StatCard from '../../components/common/StatCard';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
+import PageHeader from '../../components/common/PageHeader';
 import { 
   Users, 
   GraduationCap, 
@@ -17,105 +18,75 @@ import {
   PieChart,
   Activity
 } from 'lucide-react';
+import { getDashboardAdmin } from '../../mocks/academicMock';
 
 const AdminDashboard = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [dashboardData, setDashboardData] = useState(null);
 
-  // Mock data - will be replaced with API calls later
+  useEffect(() => {
+    // Load data from centralized mock
+    const data = getDashboardAdmin();
+    setDashboardData(data);
+  }, []);
+
+  if (!dashboardData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   const stats = [
     {
       title: 'Total Users',
-      value: '1,234',
+      value: dashboardData.totalUsers.toString(),
       icon: Users,
       iconBgColor: 'bg-blue-100',
       iconColor: 'text-blue-600',
-      trend: 12,
-      trendLabel: 'vs last month',
+      trend: 0,
+      trendLabel: 'dari mock data',
     },
     {
       title: 'Total Guru',
-      value: '45',
+      value: dashboardData.totalGuru.toString(),
       icon: GraduationCap,
       iconBgColor: 'bg-green-100',
       iconColor: 'text-green-600',
-      trend: 5,
-      trendLabel: 'vs last month',
+      trend: 0,
+      trendLabel: 'aktif mengajar',
     },
     {
       title: 'Total Siswa',
-      value: '1,189',
+      value: dashboardData.totalSiswa.toString(),
       icon: Users,
       iconBgColor: 'bg-yellow-100',
       iconColor: 'text-yellow-600',
-      trend: 8,
-      trendLabel: 'vs last month',
+      trend: 0,
+      trendLabel: 'terdaftar',
     },
     {
       title: 'Total Kelas',
-      value: '36',
+      value: dashboardData.totalKelas.toString(),
       icon: BookOpen,
       iconBgColor: 'bg-purple-100',
       iconColor: 'text-purple-600',
       trend: 0,
-      trendLabel: 'no change',
+      trendLabel: 'aktif',
     },
   ];
 
-  // Activity statistics
   const activityStats = [
-    { label: 'Materi Diupload', value: '156', change: '+12%', positive: true },
-    { label: 'Tugas Dibuat', value: '89', change: '+8%', positive: true },
-    { label: 'Tugas Dikumpulkan', value: '1,245', change: '+15%', positive: true },
-    { label: 'Rata-rata Nilai', value: '82.5', change: '-2%', positive: false },
+    { label: 'Materi Diupload', value: dashboardData.totalMateri.toString(), change: 'total', positive: true },
+    { label: 'Tugas Dibuat', value: dashboardData.totalTugas.toString(), change: 'total', positive: true },
+    { label: 'Tugas Dikumpulkan', value: dashboardData.totalSubmissions.toString(), change: 'total', positive: true },
+    { label: 'Rata-rata Nilai', value: dashboardData.rataRataNilai.toString(), change: `${dashboardData.totalAbsensi} absensi`, positive: true },
   ];
 
-  // Distribution data
-  const jurusanDistribution = [
-    { name: 'RPL', siswa: 450, percentage: 38 },
-    { name: 'TKJ', siswa: 380, percentage: 32 },
-    { name: 'MM', siswa: 359, percentage: 30 },
-  ];
+  const jurusanDistribution = dashboardData.siswaPerJurusan;
+  const recentActivities = dashboardData.recentActivities;
 
-  // Recent activities log
-  const recentActivities = [
-    {
-      user: 'Admin',
-      action: 'menambahkan user baru',
-      target: 'Budi Santoso',
-      time: '5 menit yang lalu',
-      type: 'create',
-    },
-    {
-      user: 'Pak Ahmad',
-      action: 'mengupload materi',
-      target: 'Pemrograman Web - React Hooks',
-      time: '15 menit yang lalu',
-      type: 'upload',
-    },
-    {
-      user: 'Admin',
-      action: 'mengubah jadwal',
-      target: 'XII RPL 1',
-      time: '1 jam yang lalu',
-      type: 'update',
-    },
-    {
-      user: 'Bu Siti',
-      action: 'membuat tugas',
-      target: 'Database - SQL Query',
-      time: '2 jam yang lalu',
-      type: 'create',
-    },
-    {
-      user: 'Admin',
-      action: 'menghapus kelas',
-      target: 'XI RPL 4',
-      time: '3 jam yang lalu',
-      type: 'delete',
-    },
-  ];
-
-  // System health
   const systemHealth = {
     server: 'Operational',
     database: 'Operational',
@@ -125,34 +96,27 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard Admin</h1>
-          <p className="mt-2 text-gray-600">
-            Overview dan statistik sistem LMS
-          </p>
-        </div>
-        
-        {/* Period Selector */}
-        <div className="mt-4 md:mt-0 flex gap-2">
-          {['today', 'week', 'month', 'year'].map((period) => (
-            <button
-              key={period}
-              onClick={() => setSelectedPeriod(period)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedPeriod === period
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {period === 'today' ? 'Hari Ini' : 
-               period === 'week' ? 'Minggu Ini' :
-               period === 'month' ? 'Bulan Ini' : 'Tahun Ini'}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        title="Dashboard Admin"
+        subtitle="Overview dan statistik sistem LMS"
+        actions={
+          <div className="flex gap-2">
+            {['today', 'week', 'month', 'year'].map((period) => (
+              <button
+                key={period}
+                onClick={() => setSelectedPeriod(period)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
+                  selectedPeriod === period
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {period}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

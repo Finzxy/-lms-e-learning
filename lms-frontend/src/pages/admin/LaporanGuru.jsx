@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import StatCard from '../../components/common/StatCard';
+import PageHeader from '../../components/common/PageHeader';
 import { 
   Download, 
   FileText, 
@@ -13,6 +14,7 @@ import {
   Users,
   CheckCircle
 } from 'lucide-react';
+import { getLaporanGuru } from '../../mocks/academicMock';
 
 const LaporanGuru = () => {
   const [filters, setFilters] = useState({
@@ -20,67 +22,20 @@ const LaporanGuru = () => {
     search: ''
   });
 
-  // Mock data
-  const laporanData = [
-    {
-      id: 1,
-      nip: '198501012010011001',
-      nama: 'Budi Santoso, S.Kom',
-      mataPelajaran: 'Pemrograman Web',
-      totalKelas: 4,
-      totalSiswa: 120,
-      materiUpload: 24,
-      tugasDibuat: 18,
-      avgNilaiSiswa: 85.5,
-      kehadiranMengajar: 98,
-      statusAktif: true
-    },
-    {
-      id: 2,
-      nip: '198502012010012002',
-      nama: 'Siti Aminah, S.Pd',
-      mataPelajaran: 'Basis Data',
-      totalKelas: 3,
-      totalSiswa: 90,
-      materiUpload: 20,
-      tugasDibuat: 15,
-      avgNilaiSiswa: 82.3,
-      kehadiranMengajar: 95,
-      statusAktif: true
-    },
-    {
-      id: 3,
-      nip: '198503012010013003',
-      nama: 'Ahmad Yani, M.Kom',
-      mataPelajaran: 'Algoritma & Struktur Data',
-      totalKelas: 5,
-      totalSiswa: 150,
-      materiUpload: 28,
-      tugasDibuat: 22,
-      avgNilaiSiswa: 88.0,
-      kehadiranMengajar: 100,
-      statusAktif: true
-    },
-    {
-      id: 4,
-      nip: '198504012010014004',
-      nama: 'Dewi Kusuma, S.Kom',
-      mataPelajaran: 'Jaringan Komputer',
-      totalKelas: 3,
-      totalSiswa: 85,
-      materiUpload: 18,
-      tugasDibuat: 12,
-      avgNilaiSiswa: 79.5,
-      kehadiranMengajar: 92,
-      statusAktif: true
-    },
-  ];
+  // Data laporan guru dari mock pusat
+  const laporanData = getLaporanGuru();
+
+  const totalMateriAll = laporanData.reduce((sum, g) => sum + g.materiUpload, 0);
+  const totalTugasAll = laporanData.reduce((sum, g) => sum + g.tugasDibuat, 0);
+  const avgKehadiran = laporanData.length > 0
+    ? Math.round((laporanData.reduce((sum, g) => sum + g.kehadiranMengajar, 0) / laporanData.length) * 10) / 10
+    : 0;
 
   const summary = {
-    totalGuru: 45,
-    avgKehadiran: 96.3,
-    totalMateri: 342,
-    totalTugas: 215
+    totalGuru: laporanData.length,
+    avgKehadiran,
+    totalMateri: totalMateriAll,
+    totalTugas: totalTugasAll,
   };
 
   const summaryStats = [
@@ -128,25 +83,20 @@ const LaporanGuru = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Laporan Guru</h1>
-          <p className="mt-2 text-gray-600">
-            Laporan aktivitas dan performa mengajar guru
-          </p>
-        </div>
-        
-        {/* Export Buttons */}
-        <div className="mt-4 md:mt-0 flex gap-2">
-          <Button variant="primary" size="sm" icon={Download} onClick={() => handleExport('PDF')}>
-            Export PDF
-          </Button>
-          <Button variant="primary" size="sm" icon={Download} onClick={() => handleExport('Excel')}>
-            Export Excel
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Laporan Guru"
+        subtitle="Laporan aktivitas dan performa mengajar guru"
+        actions={
+          <>
+            <Button variant="outline" size="sm" icon={Download} onClick={() => handleExport('PDF')}>
+              Export PDF
+            </Button>
+            <Button variant="primary" size="sm" icon={Download} onClick={() => handleExport('Excel')}>
+              Export Excel
+            </Button>
+          </>
+        }
+      />
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -204,7 +154,7 @@ const LaporanGuru = () => {
             <tbody className="divide-y divide-gray-100">
               {laporanData.map((guru) => (
                 <tr key={guru.id} className="hover:bg-gray-50">
-                  <td className="py-4 px-4 text-sm font-medium text-gray-900">{guru.nip}</td>
+                  <td className="py-4 px-4 text-sm font-medium text-gray-900 max-w-[160px] truncate">{guru.email}</td>
                   <td className="py-4 px-4 text-sm text-gray-900">{guru.nama}</td>
                   <td className="py-4 px-4 text-sm text-gray-600">{guru.mataPelajaran}</td>
                   <td className="py-4 px-4 text-center text-sm font-semibold text-gray-900">

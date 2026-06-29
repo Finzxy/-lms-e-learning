@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { Search, Plus, Filter } from 'lucide-react';
+import { Plus, Users as UsersIcon } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import UserForm from '../../components/forms/UserForm';
 import ActionButtons from '../../components/common/ActionButtons';
+import PageHeader from '../../components/common/PageHeader';
+import SearchFilterBar from '../../components/common/SearchFilterBar';
+import EmptyState from '../../components/common/EmptyState';
+import { users as mockUsers, enrichKelas } from '../../mocks/academicMock';
 
 const Users = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -13,55 +17,18 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Mock data - will be replaced with API calls
-  const [users] = useState([
-    {
-      id: 1,
-      name: 'Admin User',
-      email: 'admin@test.local',
-      role: 'admin',
-      status: 'active',
-      createdAt: '2024-01-01',
-    },
-    {
-      id: 2,
-      name: 'Budi Santoso',
-      email: 'budi@test.local',
-      role: 'guru',
-      nip: '1234567890123456',
-      status: 'active',
-      createdAt: '2024-01-02',
-    },
-    {
-      id: 3,
-      name: 'Ani Wijaya',
-      email: 'ani@test.local',
-      role: 'guru',
-      nip: '1234567890123457',
-      status: 'active',
-      createdAt: '2024-01-03',
-    },
-    {
-      id: 4,
-      name: 'Ahmad Fauzi',
-      email: 'ahmad@test.local',
-      role: 'siswa',
-      nis: '1001',
-      kelas: 'X RPL 1',
-      status: 'active',
-      createdAt: '2024-01-04',
-    },
-    {
-      id: 5,
-      name: 'Siti Nurhaliza',
-      email: 'siti@test.local',
-      role: 'siswa',
-      nis: '1002',
-      kelas: 'X RPL 1',
-      status: 'active',
-      createdAt: '2024-01-05',
-    },
-  ]);
+  // Data dari mock pusat (academicMock.js)
+  // Exclude password dari tampilan
+  const users = mockUsers.map(u => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    nis: u.nis || null,
+    kelas: u.kelas_id ? enrichKelas(u.kelas_id)?.nama : null,
+    kelas_id: u.kelas_id || null,
+    status: 'active',
+  }));
 
   /**
    * Handle form submit
@@ -128,18 +95,14 @@ const Users = () => {
   };
 
   /**
-   * Get role badge color
+   * Get role badge variant
    */
-  const getRoleBadgeColor = (role) => {
+  const getRoleBadgeVariant = (role) => {
     switch (role) {
-      case 'admin':
-        return 'bg-purple-100 text-purple-700';
-      case 'guru':
-        return 'bg-blue-100 text-blue-700';
-      case 'siswa':
-        return 'bg-green-100 text-green-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
+      case 'admin':  return 'purple';
+      case 'guru':   return 'secondary';
+      case 'siswa':  return 'success';
+      default:       return 'default';
     }
   };
 
@@ -156,55 +119,34 @@ const Users = () => {
 
   return (
     <div>
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Kelola User</h1>
-        <p className="mt-2 text-gray-600">
-          Manage users, roles, and permissions
-        </p>
-      </div>
-
-      {/* Action Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cari nama atau email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-
-          {/* Filter by Role */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <select
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">Semua Role</option>
-              <option value="admin">Admin</option>
-              <option value="guru">Guru</option>
-              <option value="siswa">Siswa</option>
-            </select>
-          </div>
-
-          {/* Add Button */}
-          <Button
-            variant="primary"
-            onClick={handleAdd}
-            className="whitespace-nowrap"
-          >
-            <Plus className="w-5 h-5" />
+      <PageHeader
+        title="Kelola User"
+        subtitle="Manage users, roles, dan permissions"
+        actions={
+          <Button variant="primary" onClick={handleAdd}>
+            <Plus className="w-4 h-4" />
             Tambah User
           </Button>
-        </div>
-      </div>
+        }
+      />
+
+      <SearchFilterBar
+        searchValue={searchQuery}
+        onSearchChange={(e) => setSearchQuery(e.target.value)}
+        searchPlaceholder="Cari nama atau email..."
+        filters={[
+          {
+            value: filterRole,
+            onChange: (e) => setFilterRole(e.target.value),
+            placeholder: 'Semua Role',
+            options: [
+              { value: 'admin',  label: 'Admin' },
+              { value: 'guru',   label: 'Guru' },
+              { value: 'siswa',  label: 'Siswa' },
+            ],
+          },
+        ]}
+      />
 
       {/* Users Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -238,15 +180,12 @@ const Users = () => {
             <tbody className="divide-y divide-gray-200">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
-                    <div className="text-gray-400">
-                      <p className="text-lg font-medium">Tidak ada data</p>
-                      <p className="text-sm mt-1">
-                        {searchQuery || filterRole !== 'all'
-                          ? 'Coba ubah filter pencarian'
-                          : 'Klik tombol "Tambah User" untuk menambah user baru'}
-                      </p>
-                    </div>
+                  <td colSpan="7">
+                    <EmptyState
+                      icon={UsersIcon}
+                      title="Tidak ada user"
+                      description={searchQuery || filterRole !== 'all' ? 'Coba ubah filter pencarian' : 'Klik tombol "Tambah User" untuk menambah user baru'}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -273,25 +212,26 @@ const Users = () => {
                       {user.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full capitalize ${getRoleBadgeColor(
-                          user.role
-                        )}`}
-                      >
+                      <Badge variant={getRoleBadgeVariant(user.role)} className="capitalize">
                         {user.role}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {user.role === 'guru' && user.nip && (
-                        <span>NIP: {user.nip}</span>
+                      {user.role === 'guru' && (
+                        <span className="text-gray-500">Guru Pengajar</span>
                       )}
                       {user.role === 'siswa' && (
                         <div>
-                          <div>NIS: {user.nis}</div>
-                          <div className="text-xs text-gray-500">
-                            {user.kelas}
-                          </div>
+                          {user.nis && <div>NIS: {user.nis}</div>}
+                          {user.kelas && (
+                            <div className="text-xs text-gray-500">
+                              {user.kelas}
+                            </div>
+                          )}
                         </div>
+                      )}
+                      {user.role === 'admin' && (
+                        <span className="text-gray-500">Administrator</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

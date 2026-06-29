@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Trophy, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { BarChart3, TrendingUp, Award, Trophy, TrendingDown } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
+import StatCard from '../../components/common/StatCard';
+import PageHeader from '../../components/common/PageHeader';
 import nilaiService from '../../services/nilaiService';
 
 const Nilai = () => {
@@ -62,74 +64,50 @@ const Nilai = () => {
   });
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Nilai Saya</h1>
-        <p className="text-gray-600">Lihat semua nilai dan prestasi belajar Anda</p>
-      </div>
+    <div>
+      <PageHeader
+        title="Nilai Saya"
+        subtitle="Lihat semua nilai dan prestasi belajar Anda"
+      />
 
       {/* Summary Cards */}
       {loading && !summary ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="mt-2 text-gray-600">Memuat data...</p>
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-primary" />
         </div>
       ) : summary ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            {/* Rata-rata */}
-            <Card className="bg-gray-50 border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm mb-1">Rata-rata</p>
-                  <p className="text-3xl font-bold text-gray-900">{summary.rata_rata}</p>
-                </div>
-                <div className="w-12 h-12 bg-gray-200 rounded-xl flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6 text-gray-700" />
-                </div>
-              </div>
-            </Card>
-
-            {/* Tertinggi */}
-            <Card className="bg-gray-50 border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm mb-1">Nilai Tertinggi</p>
-                  <p className="text-3xl font-bold text-gray-900">{summary.tertinggi}</p>
-                </div>
-                <div className="w-12 h-12 bg-gray-200 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-gray-700" />
-                </div>
-              </div>
-            </Card>
-
-            {/* Terendah */}
-            <Card className="bg-gray-50 border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm mb-1">Nilai Terendah</p>
-                  <p className="text-3xl font-bold text-gray-900">{summary.terendah}</p>
-                </div>
-                <div className="w-12 h-12 bg-gray-200 rounded-xl flex items-center justify-center">
-                  <TrendingDown className="w-6 h-6 text-gray-700" />
-                </div>
-              </div>
-            </Card>
-
-            {/* Total Nilai */}
-            <Card className="bg-gray-50 border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm mb-1">Total Nilai</p>
-                  <p className="text-3xl font-bold text-gray-900">{summary.total_nilai}</p>
-                </div>
-                <div className="w-12 h-12 bg-gray-200 rounded-xl flex items-center justify-center">
-                  <Trophy className="w-6 h-6 text-gray-700" />
-                </div>
-              </div>
-            </Card>
-          </div>
+  
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <StatCard
+            title="Rata-rata"
+            value={summary.rata_rata}
+            icon={BarChart3}
+            iconBgColor="bg-primary-100"
+            iconColor="text-primary-600"
+          />
+          <StatCard
+            title="Nilai Tertinggi"
+            value={summary.tertinggi}
+            icon={TrendingUp}
+            iconBgColor="bg-green-100"
+            iconColor="text-green-600"
+          />
+          <StatCard
+            title="Nilai Terendah"
+            value={summary.terendah}
+            icon={TrendingDown}
+            iconBgColor="bg-red-100"
+            iconColor="text-red-600"
+          />
+          <StatCard
+            title="Total Nilai"
+            value={summary.total_nilai}
+            icon={Trophy}
+            iconBgColor="bg-purple-100"
+            iconColor="text-purple-600"
+          />
+        </div>
 
           {/* Filter */}
           <Card className="mb-6">

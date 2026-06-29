@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Search, Download, FileText, Filter, Calendar } from 'lucide-react';
+import { Download, FileText, Calendar } from 'lucide-react';
 import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
+import PageHeader from '../../components/common/PageHeader';
+import SearchFilterBar from '../../components/common/SearchFilterBar';
+import EmptyState from '../../components/common/EmptyState';
 import materiService from '../../services/materiService';
 
 const Materi = () => {
@@ -64,41 +66,29 @@ const Materi = () => {
   };
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Materi Pembelajaran</h1>
-        <p className="text-gray-600">Akses semua materi pembelajaran yang tersedia</p>
-      </div>
+    <div>
+      <PageHeader
+        title="Materi Pembelajaran"
+        subtitle="Akses semua materi pembelajaran yang tersedia"
+      />
 
-      {/* Search & Filter Bar */}
-      <Card className="mb-6">
-        <div className="flex flex-col md:flex-row gap-4 items-center">
-          {/* Search */}
-          <div className="w-full md:flex-1">
-            <Input
-              icon={Search}
-              placeholder="Cari materi..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          {/* Filter */}
-          <div className="w-full md:w-auto">
-            <select
-              value={filterMapel}
-              onChange={(e) => setFilterMapel(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">Semua Mata Pelajaran</option>
-              <option value="1">Pemrograman Web</option>
-              <option value="2">Basis Data</option>
-              <option value="3">Algoritma</option>
-            </select>
-          </div>
-        </div>
-      </Card>
+      <SearchFilterBar
+        searchValue={searchQuery}
+        onSearchChange={(e) => setSearchQuery(e.target.value)}
+        searchPlaceholder="Cari materi..."
+        filters={[
+          {
+            value: filterMapel,
+            onChange: (e) => setFilterMapel(e.target.value),
+            placeholder: 'Semua Mata Pelajaran',
+            options: [
+              { value: '1', label: 'Pemrograman Web' },
+              { value: '2', label: 'Basis Data' },
+              { value: '3', label: 'Algoritma' },
+            ],
+          },
+        ]}
+      />
 
       {/* Materi Grid */}
       {loading && materi.length === 0 ? (

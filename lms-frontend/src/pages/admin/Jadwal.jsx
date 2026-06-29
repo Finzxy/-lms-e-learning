@@ -1,9 +1,18 @@
 import { useState } from 'react';
-import { Search, Plus, Filter } from 'lucide-react';
+import { Plus, Calendar, Search } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import ActionButtons from '../../components/common/ActionButtons';
 import JadwalForm from '../../components/forms/JadwalForm';
+import PageHeader from '../../components/common/PageHeader';
+import EmptyState from '../../components/common/EmptyState';
+import {
+  teachingAssignments,
+  enrichMataPelajaran,
+  enrichKelas,
+  enrichGuru,
+  kelas as mockKelasData,
+} from '../../mocks/academicMock';
 
 /**
  * Jadwal Page - Admin
@@ -27,76 +36,28 @@ const Jadwal = () => {
   const [selectedJadwal, setSelectedJadwal] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Mock data
-  const [jadwalList, setJadwalList] = useState([
-    {
-      id: 1,
-      hari: 'Senin',
-      jam_mulai: '07:00',
-      jam_selesai: '08:30',
-      mata_pelajaran: 'Matematika',
-      mata_pelajaran_kode: 'MTK',
-      guru: 'Pak Budi Santoso',
-      kelas: 'X RPL 1',
-      ruangan: 'R.101',
+  // Data jadwal dari teachingAssignments mock pusat (di-enrich)
+  const enrichedJadwal = teachingAssignments.map(ta => {
+    const mapel = enrichMataPelajaran(ta.mata_pelajaran_id);
+    const kelasData = enrichKelas(ta.kelas_id);
+    const guruData = enrichGuru(ta.guru_id);
+    return {
+      id: ta.id,
+      hari: ta.hari,
+      jam_mulai: ta.jam_mulai,
+      jam_selesai: ta.jam_selesai,
+      mata_pelajaran: mapel?.nama || '-',
+      mata_pelajaran_kode: mapel?.kode || '-',
+      guru: guruData?.nama || '-',
+      kelas: kelasData?.nama || '-',
+      ruangan: 'Lab Komputer',
       semester: 'Ganjil',
-    },
-    {
-      id: 2,
-      hari: 'Senin',
-      jam_mulai: '08:30',
-      jam_selesai: '10:00',
-      mata_pelajaran: 'Bahasa Indonesia',
-      mata_pelajaran_kode: 'BIND',
-      guru: 'Bu Ani Wijaya',
-      kelas: 'X RPL 1',
-      ruangan: 'R.101',
-      semester: 'Ganjil',
-    },
-    {
-      id: 3,
-      hari: 'Selasa',
-      jam_mulai: '07:00',
-      jam_selesai: '08:30',
-      mata_pelajaran: 'Pemrograman Web',
-      mata_pelajaran_kode: 'PWEB',
-      guru: 'Pak Joko Susilo',
-      kelas: 'X RPL 1',
-      ruangan: 'Lab.1',
-      semester: 'Ganjil',
-    },
-    {
-      id: 4,
-      hari: 'Rabu',
-      jam_mulai: '07:00',
-      jam_selesai: '08:30',
-      mata_pelajaran: 'Database',
-      mata_pelajaran_kode: 'DB',
-      guru: 'Pak Joko Susilo',
-      kelas: 'X RPL 1',
-      ruangan: 'Lab.2',
-      semester: 'Ganjil',
-    },
-    {
-      id: 5,
-      hari: 'Kamis',
-      jam_mulai: '07:00',
-      jam_selesai: '08:30',
-      mata_pelajaran: 'Jaringan Komputer',
-      mata_pelajaran_kode: 'JKM',
-      guru: 'Bu Siti Nurhaliza',
-      kelas: 'XI TKJ 1',
-      ruangan: 'Lab.3',
-      semester: 'Ganjil',
-    },
-  ]);
+    };
+  });
 
-  const mockKelas = [
-    { id: 1, nama: 'X RPL 1' },
-    { id: 2, nama: 'X RPL 2' },
-    { id: 3, nama: 'XI TKJ 1' },
-    { id: 4, nama: 'XI MM 1' },
-  ];
+  const [jadwalList, setJadwalList] = useState(enrichedJadwal);
+
+  const mockKelas = mockKelasData.map(k => ({ id: k.id, nama: k.nama }));
 
   const hariOptions = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
@@ -177,11 +138,21 @@ const Jadwal = () => {
 
   return (
     <div>
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Jadwal Pelajaran</h1>
-        <p className="text-gray-600">Kelola jadwal pelajaran sekolah</p>
-      </div>
+      <PageHeader
+        title="Jadwal Pelajaran"
+        subtitle="Kelola jadwal pelajaran sekolah"
+        actions={
+          <>
+            <Button variant="outline" onClick={handleExportPDF}>
+              Export PDF
+            </Button>
+            <Button variant="primary" onClick={handleAdd}>
+              <Plus className="w-4 h-4" />
+              Tambah Jadwal
+            </Button>
+          </>
+        }
+      />
 
       {/* View Toggle & Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">

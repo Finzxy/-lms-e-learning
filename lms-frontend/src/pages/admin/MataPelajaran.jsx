@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { Search, Plus, Filter } from 'lucide-react';
+import { Plus, BookOpen } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import ActionButtons from '../../components/common/ActionButtons';
 import MataPelajaranForm from '../../components/forms/MataPelajaranForm';
+import PageHeader from '../../components/common/PageHeader';
+import SearchFilterBar from '../../components/common/SearchFilterBar';
+import EmptyState from '../../components/common/EmptyState';
+import { mataPelajaran as mockMapel, jurusan as mockJurusan } from '../../mocks/academicMock';
 
 const MataPelajaran = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,81 +18,29 @@ const MataPelajaran = () => {
   const [selectedMapel, setSelectedMapel] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Mock data - will be replaced with API calls
-  const [mapelList] = useState([
-    {
-      id: 1,
-      kode: 'MTK',
-      nama: 'Matematika',
-      kategori: 'umum',
-      jurusan: 'Semua',
-      jurusan_ids: [],
-      sks: 4,
+  // Data dari mock pusat
+  const [mapelList, setMapelList] = useState(
+    mockMapel.map(m => ({
+      id: m.id,
+      kode: m.kode,
+      nama: m.nama,
+      // Tentukan kategori dan jurusan berdasarkan kode
+      kategori: ['PW', 'BD', 'ALG', 'JK', 'DG'].includes(m.kode) ? 'produktif' : 'umum',
+      jurusan: m.kode === 'PW' || m.kode === 'BD' || m.kode === 'ALG' ? 'RPL'
+        : m.kode === 'JK' ? 'TKJ'
+        : m.kode === 'DG' ? 'MM'
+        : 'Semua',
+      jurusan_ids: m.kode === 'PW' || m.kode === 'BD' || m.kode === 'ALG' ? [1]
+        : m.kode === 'JK' ? [2]
+        : m.kode === 'DG' ? [3]
+        : [],
+      sks: ['PW', 'BD', 'ALG', 'JK', 'DG'].includes(m.kode) ? 6 : 4,
       tingkat: ['10', '11', '12'],
       is_active: true,
-    },
-    {
-      id: 2,
-      kode: 'BIND',
-      nama: 'Bahasa Indonesia',
-      kategori: 'umum',
-      jurusan: 'Semua',
-      jurusan_ids: [],
-      sks: 4,
-      tingkat: ['10', '11', '12'],
-      is_active: true,
-    },
-    {
-      id: 3,
-      kode: 'PWEB',
-      nama: 'Pemrograman Web',
-      kategori: 'produktif',
-      jurusan: 'RPL',
-      jurusan_ids: [1],
-      sks: 6,
-      tingkat: ['11', '12'],
-      is_active: true,
-    },
-    {
-      id: 4,
-      kode: 'JKM',
-      nama: 'Jaringan Komputer',
-      kategori: 'produktif',
-      jurusan: 'TKJ',
-      jurusan_ids: [2],
-      sks: 6,
-      tingkat: ['10', '11', '12'],
-      is_active: true,
-    },
-    {
-      id: 5,
-      kode: 'DG',
-      nama: 'Desain Grafis',
-      kategori: 'produktif',
-      jurusan: 'MM',
-      jurusan_ids: [3],
-      sks: 6,
-      tingkat: ['10', '11', '12'],
-      is_active: true,
-    },
-    {
-      id: 6,
-      kode: 'MULOK',
-      nama: 'Bahasa Sunda',
-      kategori: 'muatan_lokal',
-      jurusan: 'Semua',
-      jurusan_ids: [],
-      sks: 2,
-      tingkat: ['10'],
-      is_active: true,
-    },
-  ]);
+    }))
+  );
 
-  const jurusanList = [
-    { id: 1, kode: 'RPL' },
-    { id: 2, kode: 'TKJ' },
-    { id: 3, kode: 'MM' },
-  ];
+  const jurusanList = mockJurusan.map(j => ({ id: j.id, kode: j.kode }));
 
   /**
    * Handle form submit
@@ -151,15 +103,11 @@ const MataPelajaran = () => {
   };
 
   /**
-   * Get kategori badge color
+   * Get kategori badge variant
    */
-  const getKategoriColor = (kategori) => {
-    const colors = {
-      umum: 'bg-blue-100 text-blue-700',
-      produktif: 'bg-green-100 text-green-700',
-      muatan_lokal: 'bg-purple-100 text-purple-700',
-    };
-    return colors[kategori] || 'bg-gray-100 text-gray-700';
+  const getKategoriVariant = (kategori) => {
+    const map = { umum: 'secondary', produktif: 'success', muatan_lokal: 'purple' };
+    return map[kategori] || 'default';
   };
 
   /**
@@ -192,69 +140,40 @@ const MataPelajaran = () => {
 
   return (
     <div>
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Data Mata Pelajaran</h1>
-        <p className="mt-2 text-gray-600">
-          Kelola data mata pelajaran yang diajarkan
-        </p>
-      </div>
-
-      {/* Action Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cari kode atau nama mata pelajaran..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-
-          {/* Filter by Kategori */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <select
-              value={filterKategori}
-              onChange={(e) => setFilterKategori(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">Semua Kategori</option>
-              <option value="umum">Umum</option>
-              <option value="produktif">Produktif</option>
-              <option value="muatan_lokal">Muatan Lokal</option>
-            </select>
-          </div>
-
-          {/* Filter by Jurusan */}
-          <select
-            value={filterJurusan}
-            onChange={(e) => setFilterJurusan(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="all">Semua Jurusan</option>
-            {jurusanList.map((jurusan) => (
-              <option key={jurusan.id} value={jurusan.id}>
-                {jurusan.kode}
-              </option>
-            ))}
-          </select>
-
-          {/* Add Button */}
-          <Button
-            variant="primary"
-            onClick={handleAdd}
-            className="whitespace-nowrap"
-          >
-            <Plus className="w-5 h-5" />
+      <PageHeader
+        title="Data Mata Pelajaran"
+        subtitle="Kelola data mata pelajaran yang diajarkan"
+        actions={
+          <Button variant="primary" onClick={handleAdd}>
+            <Plus className="w-4 h-4" />
             Tambah Mapel
           </Button>
-        </div>
-      </div>
+        }
+      />
+
+      <SearchFilterBar
+        searchValue={searchQuery}
+        onSearchChange={(e) => setSearchQuery(e.target.value)}
+        searchPlaceholder="Cari kode atau nama mata pelajaran..."
+        filters={[
+          {
+            value: filterKategori,
+            onChange: (e) => setFilterKategori(e.target.value),
+            placeholder: 'Semua Kategori',
+            options: [
+              { value: 'umum',         label: 'Umum' },
+              { value: 'produktif',    label: 'Produktif' },
+              { value: 'muatan_lokal', label: 'Muatan Lokal' },
+            ],
+          },
+          {
+            value: filterJurusan,
+            onChange: (e) => setFilterJurusan(e.target.value),
+            placeholder: 'Semua Jurusan',
+            options: jurusanList.map(j => ({ value: j.id, label: j.kode })),
+          },
+        ]}
+      />
 
       {/* Mata Pelajaran Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -291,15 +210,12 @@ const MataPelajaran = () => {
             <tbody className="divide-y divide-gray-200">
               {filteredMapel.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-12 text-center">
-                    <div className="text-gray-400">
-                      <p className="text-lg font-medium">Tidak ada data</p>
-                      <p className="text-sm mt-1">
-                        {searchQuery || filterKategori !== 'all' || filterJurusan !== 'all'
-                          ? 'Coba ubah filter pencarian'
-                          : 'Klik tombol "Tambah Mapel" untuk menambah mata pelajaran baru'}
-                      </p>
-                    </div>
+                  <td colSpan="8">
+                    <EmptyState
+                      icon={BookOpen}
+                      title="Tidak ada mata pelajaran"
+                      description={searchQuery || filterKategori !== 'all' || filterJurusan !== 'all' ? 'Coba ubah filter pencarian' : 'Klik tombol "Tambah Mapel" untuk menambah mata pelajaran baru'}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -322,13 +238,9 @@ const MataPelajaran = () => {
                       </p>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getKategoriColor(
-                          mapel.kategori
-                        )}`}
-                      >
+                      <Badge variant={getKategoriVariant(mapel.kategori)}>
                         {getKategoriLabel(mapel.kategori)}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {mapel.jurusan}

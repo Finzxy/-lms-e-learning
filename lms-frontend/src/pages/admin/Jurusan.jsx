@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { Search, Plus, Filter } from 'lucide-react';
+import { Plus, GraduationCap } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import ActionButtons from '../../components/common/ActionButtons';
 import JurusanForm from '../../components/forms/JurusanForm';
+import PageHeader from '../../components/common/PageHeader';
+import SearchFilterBar from '../../components/common/SearchFilterBar';
+import EmptyState from '../../components/common/EmptyState';
+import { jurusan as mockJurusan } from '../../mocks/academicMock';
 
 const Jurusan = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -13,41 +17,17 @@ const Jurusan = () => {
   const [selectedJurusan, setSelectedJurusan] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Mock data - will be replaced with API calls
-  const [jurusanList] = useState([
-    {
-      id: 1,
-      kode: 'RPL',
-      nama: 'Rekayasa Perangkat Lunak',
-      deskripsi: 'Jurusan yang mempelajari pengembangan software dan aplikasi',
+  // Data dari mock pusat
+  const [jurusanList, setJurusanList] = useState(
+    mockJurusan.map(j => ({
+      ...j,
+      deskripsi: j.kode === 'RPL' ? 'Jurusan yang mempelajari pengembangan software dan aplikasi'
+        : j.kode === 'TKJ' ? 'Jurusan yang mempelajari jaringan komputer dan infrastruktur IT'
+        : 'Jurusan yang mempelajari desain grafis, video editing, dan animasi',
       is_active: true,
       createdAt: '2024-01-01',
-    },
-    {
-      id: 2,
-      kode: 'TKJ',
-      nama: 'Teknik Komputer dan Jaringan',
-      deskripsi: 'Jurusan yang mempelajari jaringan komputer dan infrastruktur IT',
-      is_active: true,
-      createdAt: '2024-01-02',
-    },
-    {
-      id: 3,
-      kode: 'MM',
-      nama: 'Multimedia',
-      deskripsi: 'Jurusan yang mempelajari desain grafis, video editing, dan animasi',
-      is_active: true,
-      createdAt: '2024-01-03',
-    },
-    {
-      id: 4,
-      kode: 'TBSM',
-      nama: 'Teknik dan Bisnis Sepeda Motor',
-      deskripsi: 'Jurusan yang mempelajari perawatan dan perbaikan sepeda motor',
-      is_active: false,
-      createdAt: '2024-01-04',
-    },
-  ]);
+    }))
+  );
 
   /**
    * Handle form submit
@@ -129,54 +109,33 @@ const Jurusan = () => {
 
   return (
     <div>
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Data Jurusan</h1>
-        <p className="mt-2 text-gray-600">
-          Kelola data jurusan yang tersedia di sekolah
-        </p>
-      </div>
-
-      {/* Action Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cari kode atau nama jurusan..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-
-          {/* Filter by Status */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">Semua Status</option>
-              <option value="active">Aktif</option>
-              <option value="inactive">Nonaktif</option>
-            </select>
-          </div>
-
-          {/* Add Button */}
-          <Button
-            variant="primary"
-            onClick={handleAdd}
-            className="whitespace-nowrap"
-          >
-            <Plus className="w-5 h-5" />
+      <PageHeader
+        title="Data Jurusan"
+        subtitle="Kelola data jurusan yang tersedia di sekolah"
+        actions={
+          <Button variant="primary" onClick={handleAdd}>
+            <Plus className="w-4 h-4" />
             Tambah Jurusan
           </Button>
-        </div>
-      </div>
+        }
+      />
+
+      <SearchFilterBar
+        searchValue={searchQuery}
+        onSearchChange={(e) => setSearchQuery(e.target.value)}
+        searchPlaceholder="Cari kode atau nama jurusan..."
+        filters={[
+          {
+            value: filterStatus,
+            onChange: (e) => setFilterStatus(e.target.value),
+            placeholder: 'Semua Status',
+            options: [
+              { value: 'active',   label: 'Aktif' },
+              { value: 'inactive', label: 'Nonaktif' },
+            ],
+          },
+        ]}
+      />
 
       {/* Jurusan Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -207,15 +166,12 @@ const Jurusan = () => {
             <tbody className="divide-y divide-gray-200">
               {filteredJurusan.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
-                    <div className="text-gray-400">
-                      <p className="text-lg font-medium">Tidak ada data</p>
-                      <p className="text-sm mt-1">
-                        {searchQuery || filterStatus !== 'all'
-                          ? 'Coba ubah filter pencarian'
-                          : 'Klik tombol "Tambah Jurusan" untuk menambah jurusan baru'}
-                      </p>
-                    </div>
+                  <td colSpan="6">
+                    <EmptyState
+                      icon={GraduationCap}
+                      title="Tidak ada jurusan"
+                      description={searchQuery || filterStatus !== 'all' ? 'Coba ubah filter pencarian' : 'Klik tombol "Tambah Jurusan" untuk menambah jurusan baru'}
+                    />
                   </td>
                 </tr>
               ) : (

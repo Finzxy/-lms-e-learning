@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { Search, Plus, Filter, Users } from 'lucide-react';
+import { Plus, Users, BookOpen } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import ActionButtons from '../../components/common/ActionButtons';
 import KelasForm from '../../components/forms/KelasForm';
+import PageHeader from '../../components/common/PageHeader';
+import SearchFilterBar from '../../components/common/SearchFilterBar';
+import EmptyState from '../../components/common/EmptyState';
+import { kelas as mockKelas, jurusan as mockJurusan, getSiswaByKelas } from '../../mocks/academicMock';
 
 const Kelas = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,59 +18,22 @@ const Kelas = () => {
   const [selectedKelas, setSelectedKelas] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Mock data - will be replaced with API calls
-  const [kelasList] = useState([
-    {
-      id: 1,
-      nama: 'X RPL 1',
-      jurusan: { id: 1, kode: 'RPL', nama: 'Rekayasa Perangkat Lunak' },
-      tingkat: '10',
-      wali_kelas: { id: 1, name: 'Budi Santoso' },
-      jumlah_siswa: 32,
+  // Data dari mock pusat
+  const [kelasList, setKelasList] = useState(
+    mockKelas.map(k => ({
+      id: k.id,
+      nama: k.nama,
+      jurusan: k.jurusan,
+      tingkat: k.tingkat.toString(),
+      wali_kelas: null,
+      jumlah_siswa: getSiswaByKelas(k.id).length,
       kapasitas: 32,
-      tahun_ajaran: '2024/2025',
+      tahun_ajaran: '2025/2026',
       is_active: true,
-    },
-    {
-      id: 2,
-      nama: 'X RPL 2',
-      jurusan: { id: 1, kode: 'RPL', nama: 'Rekayasa Perangkat Lunak' },
-      tingkat: '10',
-      wali_kelas: { id: 2, name: 'Ani Wijaya' },
-      jumlah_siswa: 30,
-      kapasitas: 32,
-      tahun_ajaran: '2024/2025',
-      is_active: true,
-    },
-    {
-      id: 3,
-      nama: 'XI TKJ 1',
-      jurusan: { id: 2, kode: 'TKJ', nama: 'Teknik Komputer dan Jaringan' },
-      tingkat: '11',
-      wali_kelas: { id: 3, name: 'Joko Susilo' },
-      jumlah_siswa: 28,
-      kapasitas: 32,
-      tahun_ajaran: '2024/2025',
-      is_active: true,
-    },
-    {
-      id: 4,
-      nama: 'XII MM 1',
-      jurusan: { id: 3, kode: 'MM', nama: 'Multimedia' },
-      tingkat: '12',
-      wali_kelas: { id: 4, name: 'Siti Rahayu' },
-      jumlah_siswa: 25,
-      kapasitas: 30,
-      tahun_ajaran: '2024/2025',
-      is_active: true,
-    },
-  ]);
+    }))
+  );
 
-  const jurusanList = [
-    { id: 1, kode: 'RPL' },
-    { id: 2, kode: 'TKJ' },
-    { id: 3, kode: 'MM' },
-  ];
+  const jurusanList = mockJurusan.map(j => ({ id: j.id, kode: j.kode }));
 
   /**
    * Handle form submit
@@ -108,7 +75,7 @@ const Kelas = () => {
     setSelectedKelas({
       ...kelas,
       jurusan_id: kelas.jurusan.id,
-      wali_kelas_id: kelas.wali_kelas.id,
+      wali_kelas_id: kelas.wali_kelas ? kelas.wali_kelas.id : null,
     });
     setIsModalOpen(true);
   };
@@ -133,15 +100,11 @@ const Kelas = () => {
   };
 
   /**
-   * Get jurusan badge color
+   * Get jurusan badge variant
    */
-  const getJurusanColor = (kode) => {
-    const colors = {
-      RPL: 'bg-blue-100 text-blue-700',
-      TKJ: 'bg-green-100 text-green-700',
-      MM: 'bg-purple-100 text-purple-700',
-    };
-    return colors[kode] || 'bg-gray-100 text-gray-700';
+  const getJurusanVariant = (kode) => {
+    const map = { RPL: 'secondary', TKJ: 'success', MM: 'purple' };
+    return map[kode] || 'default';
   };
 
   /**
@@ -160,69 +123,41 @@ const Kelas = () => {
 
   return (
     <div>
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Data Kelas</h1>
-        <p className="mt-2 text-gray-600">
-          Kelola data kelas dan wali kelas
-        </p>
-      </div>
-
-      {/* Action Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cari nama kelas..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-
-          {/* Filter by Jurusan */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <select
-              value={filterJurusan}
-              onChange={(e) => setFilterJurusan(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">Semua Jurusan</option>
-              {jurusanList.map((jurusan) => (
-                <option key={jurusan.id} value={jurusan.id}>
-                  {jurusan.kode}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filter by Tingkat */}
-          <select
-            value={filterTingkat}
-            onChange={(e) => setFilterTingkat(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="all">Semua Tingkat</option>
-            <option value="10">Kelas X</option>
-            <option value="11">Kelas XI</option>
-            <option value="12">Kelas XII</option>
-          </select>
-
-          {/* Add Button */}
-          <Button
-            variant="primary"
-            onClick={handleAdd}
-            className="whitespace-nowrap"
-          >
-            <Plus className="w-5 h-5" />
+      <PageHeader
+        title="Data Kelas"
+        subtitle="Kelola data kelas dan wali kelas"
+        actions={
+          <Button variant="primary" onClick={handleAdd}>
+            <Plus className="w-4 h-4" />
             Tambah Kelas
           </Button>
-        </div>
-      </div>
+        }
+      />
+
+      <SearchFilterBar
+        searchValue={searchQuery}
+        onSearchChange={(e) => setSearchQuery(e.target.value)}
+        searchPlaceholder="Cari nama kelas..."
+        filters={[
+          {
+            value: filterJurusan,
+            onChange: (e) => setFilterJurusan(e.target.value),
+            placeholder: 'Semua Jurusan',
+            options: jurusanList.map(j => ({ value: j.id, label: j.kode })),
+          },
+          {
+            value: filterTingkat,
+            onChange: (e) => setFilterTingkat(e.target.value),
+            placeholder: 'Semua Tingkat',
+            options: [
+              { value: '10', label: 'Kelas X' },
+              { value: '11', label: 'Kelas XI' },
+              { value: '12', label: 'Kelas XII' },
+            ],
+          },
+        ]}
+      />
+
 
       {/* Kelas Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -259,15 +194,12 @@ const Kelas = () => {
             <tbody className="divide-y divide-gray-200">
               {filteredKelas.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-12 text-center">
-                    <div className="text-gray-400">
-                      <p className="text-lg font-medium">Tidak ada data</p>
-                      <p className="text-sm mt-1">
-                        {searchQuery || filterJurusan !== 'all' || filterTingkat !== 'all'
-                          ? 'Coba ubah filter pencarian'
-                          : 'Klik tombol "Tambah Kelas" untuk menambah kelas baru'}
-                      </p>
-                    </div>
+                  <td colSpan="8">
+                    <EmptyState
+                      icon={BookOpen}
+                      title="Tidak ada kelas"
+                      description={searchQuery || filterJurusan !== 'all' || filterTingkat !== 'all' ? 'Coba ubah filter pencarian' : 'Klik tombol "Tambah Kelas" untuk menambah kelas baru'}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -285,13 +217,9 @@ const Kelas = () => {
                       </p>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getJurusanColor(
-                          kelas.jurusan.kode
-                        )}`}
-                      >
+                      <Badge variant={getJurusanVariant(kelas.jurusan.kode)}>
                         {kelas.jurusan.kode}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {kelas.tingkat === '10' && 'X'}
@@ -299,7 +227,7 @@ const Kelas = () => {
                       {kelas.tingkat === '12' && 'XII'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {kelas.wali_kelas.name}
+                      {kelas.wali_kelas ? kelas.wali_kelas.name : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">

@@ -1,102 +1,31 @@
 import api from './api';
+import {
+  tugas as mockTugas,
+  submissions as mockSubmissions,
+  getCurrentUser,
+  validateTeacherAssignment,
+  enrichMataPelajaran,
+  enrichKelas,
+  enrichGuru,
+  enrichSiswa,
+  getSiswaByKelas,
+  mockDelay,
+} from '../mocks/academicMock';
 
-// Mock data untuk development
-const mockTugas = [
-  {
-    id: 1,
-    judul: 'Membuat Website Portfolio',
-    deskripsi: 'Buat website portfolio pribadi menggunakan HTML, CSS, dan JavaScript. Website harus responsive dan memiliki minimal 3 halaman: Home, About, Projects.',
-    mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    guru: { id: 2, nama: 'Budi Santoso' },
-    deadline: '2024-02-15T23:59:00Z',
-    max_score: 100,
-    file_name: 'tugas-portfolio-brief.pdf',
-    file_url: '/files/tugas/portfolio-brief.pdf',
-    status: 'active', // active, closed
-    total_submissions: 25,
-    total_students: 30,
-    created_at: '2024-01-15T08:00:00Z',
-    updated_at: '2024-01-15T08:00:00Z',
-  },
-  {
-    id: 2,
-    judul: 'Query Database MySQL',
-    deskripsi: 'Kerjakan 20 soal query MySQL yang ada di file attachment. Upload file SQL sebagai jawaban.',
-    mata_pelajaran: { id: 2, nama: 'Basis Data' },
-    kelas: { id: 1, nama: 'XII RPL 1' },
-    guru: { id: 2, nama: 'Budi Santoso' },
-    deadline: '2024-02-20T23:59:00Z',
-    max_score: 100,
-    file_name: 'mysql-queries.pdf',
-    file_url: '/files/tugas/mysql-queries.pdf',
-    status: 'active',
-    total_submissions: 18,
-    total_students: 30,
-    created_at: '2024-01-18T10:00:00Z',
-    updated_at: '2024-01-18T10:00:00Z',
-  },
-  {
-    id: 3,
-    judul: 'Implementasi Algoritma Sorting',
-    deskripsi: 'Implementasikan 3 algoritma sorting (Bubble, Quick, Merge) dalam bahasa pemrograman pilihan Anda. Sertakan analisis kompleksitas waktu.',
-    mata_pelajaran: { id: 3, nama: 'Algoritma' },
-    kelas: { id: 2, nama: 'XII RPL 2' },
-    guru: { id: 3, nama: 'Siti Rahayu' },
-    deadline: '2024-01-10T23:59:00Z', // Past deadline
-    max_score: 100,
-    file_name: null,
-    file_url: null,
-    status: 'closed',
-    total_submissions: 28,
-    total_students: 28,
-    created_at: '2024-01-05T08:00:00Z',
-    updated_at: '2024-01-11T08:00:00Z',
-  },
-];
-
-// Mock submission data (pengumpulan tugas)
-const mockSubmissions = [
-  {
-    id: 1,
-    tugas_id: 1,
-    siswa: { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
-    file_name: 'ahmad-portfolio.zip',
-    file_url: '/files/submissions/ahmad-portfolio.zip',
-    catatan: 'Sudah saya kerjakan semua pak, mohon reviewnya',
-    nilai: 85,
-    feedback: 'Bagus, tapi masih ada bug di halaman projects',
-    status: 'graded', // submitted, graded, late
-    submitted_at: '2024-02-10T14:30:00Z',
-    graded_at: '2024-02-12T10:00:00Z',
-  },
-  {
-    id: 2,
-    tugas_id: 1,
-    siswa: { id: 5, nama: 'Dewi Lestari', nis: '12346' },
-    file_name: 'dewi-portfolio.zip',
-    file_url: '/files/submissions/dewi-portfolio.zip',
-    catatan: null,
-    nilai: null,
-    feedback: null,
-    status: 'submitted',
-    submitted_at: '2024-02-11T09:15:00Z',
-    graded_at: null,
-  },
-  {
-    id: 3,
-    tugas_id: 2,
-    siswa: { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
-    file_name: 'mysql-answers.sql',
-    file_url: '/files/submissions/mysql-answers.sql',
-    catatan: 'Query nomor 15-20 agak susah pak',
-    nilai: 90,
-    feedback: 'Excellent! Semua query benar',
-    status: 'graded',
-    submitted_at: '2024-02-18T20:00:00Z',
-    graded_at: '2024-02-19T08:30:00Z',
-  },
-];
+// Helper to enrich tugas with full data
+const enrichTugas = (t) => {
+  const siswaList = getSiswaByKelas(t.kelas_id);
+  const tugasSubmissions = mockSubmissions.filter(s => s.tugas_id === t.id);
+  
+  return {
+    ...t,
+    mata_pelajaran: enrichMataPelajaran(t.mata_pelajaran_id),
+    kelas: enrichKelas(t.kelas_id),
+    guru: enrichGuru(t.guru_id),
+    total_submissions: tugasSubmissions.length,
+    total_students: siswaList.length,
+  };
+};
 
 /**
  * Get all tugas with optional filters
@@ -110,16 +39,29 @@ export const getAllTugas = async (params = {}) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await mockDelay(500);
     
+    const currentUser = getCurrentUser();
     let filtered = [...mockTugas];
+    
+    // Filter by role
+    if (currentUser) {
+      if (currentUser.role === 'guru') {
+        // Guru hanya melihat tugas yang dia buat
+        filtered = filtered.filter(t => t.guru_id === currentUser.id);
+      } else if (currentUser.role === 'siswa') {
+        // Siswa hanya melihat tugas untuk kelasnya
+        filtered = filtered.filter(t => t.kelas_id === currentUser.kelas_id);
+      }
+      // Admin melihat semua
+    }
     
     // Apply filters
     if (params.mata_pelajaran_id) {
-      filtered = filtered.filter(t => t.mata_pelajaran.id === parseInt(params.mata_pelajaran_id));
+      filtered = filtered.filter(t => t.mata_pelajaran_id === parseInt(params.mata_pelajaran_id));
     }
     if (params.kelas_id) {
-      filtered = filtered.filter(t => t.kelas.id === parseInt(params.kelas_id));
+      filtered = filtered.filter(t => t.kelas_id === parseInt(params.kelas_id));
     }
     if (params.status) {
       filtered = filtered.filter(t => t.status === params.status);
@@ -132,9 +74,12 @@ export const getAllTugas = async (params = {}) => {
       );
     }
     
+    // Enrich with full data
+    const enriched = filtered.map(enrichTugas);
+    
     return {
-      data: filtered,
-      total: filtered.length,
+      data: enriched,
+      total: enriched.length,
     };
   } catch (error) {
     throw error.response?.data || error;
@@ -153,12 +98,22 @@ export const getTugasById = async (id) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await mockDelay(300);
     const tugas = mockTugas.find(t => t.id === parseInt(id));
     if (!tugas) {
       throw { message: 'Tugas tidak ditemukan' };
     }
-    return { data: tugas };
+    
+    const currentUser = getCurrentUser();
+    // Check access
+    if (currentUser && currentUser.role === 'guru' && tugas.guru_id !== currentUser.id) {
+      throw { status: 403, message: 'Anda tidak memiliki akses ke tugas ini' };
+    }
+    if (currentUser && currentUser.role === 'siswa' && tugas.kelas_id !== currentUser.kelas_id) {
+      throw { status: 403, message: 'Anda tidak memiliki akses ke tugas ini' };
+    }
+    
+    return { data: enrichTugas(tugas) };
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -180,28 +135,37 @@ export const createTugas = async (formData) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await mockDelay(800);
+    
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'guru') {
+      throw { status: 403, message: 'Hanya guru yang dapat membuat tugas' };
+    }
+    
+    const mataPelajaranId = parseInt(formData.get('mata_pelajaran_id'));
+    const kelasId = parseInt(formData.get('kelas_id'));
+    
+    // Validate teaching assignment
+    validateTeacherAssignment(currentUser.id, mataPelajaranId, kelasId);
     
     const newTugas = {
       id: mockTugas.length + 1,
       judul: formData.get('judul'),
       deskripsi: formData.get('deskripsi'),
-      mata_pelajaran: { id: 1, nama: 'Pemrograman Web' },
-      kelas: { id: 1, nama: 'XII RPL 1' },
-      guru: { id: 2, nama: 'Budi Santoso' },
+      guru_id: currentUser.id,
+      mata_pelajaran_id: mataPelajaranId,
+      kelas_id: kelasId,
       deadline: formData.get('deadline'),
       max_score: parseInt(formData.get('max_score')) || 100,
       file_name: formData.get('file')?.name || null,
       file_url: formData.get('file') ? '/files/tugas/new-file.pdf' : null,
       status: 'active',
-      total_submissions: 0,
-      total_students: 30,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     
     mockTugas.push(newTugas);
-    return { data: newTugas, message: 'Tugas berhasil dibuat' };
+    return { data: enrichTugas(newTugas), message: 'Tugas berhasil dibuat' };
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -283,9 +247,25 @@ export const getTugasSubmissions = async (tugasId) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await mockDelay(400);
+    
+    const tugas = mockTugas.find(t => t.id === parseInt(tugasId));
+    if (!tugas) {
+      throw { message: 'Tugas tidak ditemukan' };
+    }
+    
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.role === 'guru' && tugas.guru_id !== currentUser.id) {
+      throw { status: 403, message: 'Anda tidak dapat melihat submission tugas orang lain' };
+    }
+    
     const submissions = mockSubmissions.filter(s => s.tugas_id === parseInt(tugasId));
-    return { data: submissions };
+    const enriched = submissions.map(s => ({
+      ...s,
+      siswa: enrichSiswa(s.siswa_id),
+    }));
+    
+    return { data: enriched };
   } catch (error) {
     throw error.response?.data || error;
   }
@@ -308,12 +288,26 @@ export const submitTugas = async (tugasId, formData) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate upload
+    await mockDelay(1000); // Simulate upload
+    
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'siswa') {
+      throw { status: 403, message: 'Hanya siswa yang dapat mengumpulkan tugas' };
+    }
+    
+    const tugas = mockTugas.find(t => t.id === parseInt(tugasId));
+    if (!tugas) {
+      throw { message: 'Tugas tidak ditemukan' };
+    }
+    
+    if (tugas.kelas_id !== currentUser.kelas_id) {
+      throw { status: 403, message: 'Tugas ini bukan untuk kelas Anda' };
+    }
     
     const newSubmission = {
       id: mockSubmissions.length + 1,
       tugas_id: parseInt(tugasId),
-      siswa: { id: 4, nama: 'Ahmad Fauzi', nis: '12345' },
+      siswa_id: currentUser.id,
       file_name: formData.get('file')?.name || 'submission.pdf',
       file_url: '/files/submissions/new-submission.pdf',
       catatan: formData.get('catatan') || null,
@@ -377,10 +371,15 @@ export const getMySubmissions = async (params = {}) => {
     // return response.data;
 
     // Mock response for development
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await mockDelay(400);
     
-    // Filter submissions by current user (mock: siswa id 4)
-    let filtered = mockSubmissions.filter(s => s.siswa.id === 4);
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'siswa') {
+      throw { status: 403, message: 'Hanya siswa yang dapat melihat submission mereka' };
+    }
+    
+    // Filter submissions by current user
+    let filtered = mockSubmissions.filter(s => s.siswa_id === currentUser.id);
     
     if (params.status) {
       filtered = filtered.filter(s => s.status === params.status);
